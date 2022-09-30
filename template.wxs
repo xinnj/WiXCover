@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  
+  <Product Name='${ProductName}' Id='*' UpgradeCode='${UpgradeCode}'
+    Language='${Language}' Codepage='${Codepage}' Version='${ProductVersion}' Manufacturer='${ManufacturerLoc}'>
+
+    <Package Id='*' Keywords='Installer' Description='${ProductNameLoc} ${LocInstaller}'
+      Comments='${ProductNameLoc}' Manufacturer='${ManufacturerLoc}'
+      InstallerVersion='500' Languages='${Language}' Compressed='yes' SummaryCodepage='${Codepage}' />
+
+    <MajorUpgrade AllowDowngrades='${AllowDowngrades}' AllowSameVersionUpgrades='${AllowSameVersionUpgrades}' Schedule='afterInstallValidate'
+      DowngradeErrorMessage='A later version of ${ProductNameLoc} is already installed.' />
+      
+    <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' CompressionLevel='high' />
+    <Property Id='DiskPrompt' Value='${ProductNameLoc} ${LocInstaller} [1]' />
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='ProgramFilesFolder' Name='PFiles'>
+          <Directory Id='APPLICATIONFOLDER'>
+          </Directory>
+      </Directory>
+
+      <Directory Id='ProgramMenuFolder' Name='Programs'>
+        <Directory Id='ProgramMenuDir' Name='${ProductName}'>
+          <Component Id='ProgramMenuDir' Guid='*'>
+            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+            <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
+            <Shortcut Id='startmenushortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
+              Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
+            <Shortcut Id='UninstallProduct' Name='${LocUninstall} ${ProductNameLoc}' Description='${LocUninstall} ${ProductNameLoc}'
+              Target='[System64Folder]msiexec.exe' Arguments='/x [ProductCode]'/>
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id='DesktopFolder' Name='Desktop' >
+        <Component Id='DesktopMenuDir' Guid='*'>
+          <RemoveFolder Id='DesktopMenuDir' On='uninstall' />
+          <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
+          <Shortcut Id='desktopshortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
+            Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
+          </Component>
+      </Directory>
+    </Directory>
+
+    <Feature Id='Complete' Level='1' Title='${ProductNameLoc}' Description='The complete package.'>
+      <ComponentRef Id='ProgramMenuDir' />
+      <ComponentRef Id='DesktopMenuDir' />
+      <ComponentGroupRef Id='FileGroup' />
+      <ComponentGroupRef Id='RegGroup' />
+    </Feature>
+
+    <Icon Id='${IconId}' SourceFile='${IconFile}' />
+
+    <Property Id='ARPPRODUCTICON' Value='${IconId}' />
+    
+    <Property Id='ApplicationFolderName' Value='${Manufacturer}\${ProductName}' />
+    <Property Id='WixAppFolder' Value='${WixAppFolder}' />
+    <Property Id='ALLUSERS' Value='${ALLUSERS}' />
+    <Property Id='Privileged' Value='${Privileged}' />
+    <Property Id='MSIINSTALLPERUSER' Value='${MSIINSTALLPERUSER}' />
+    
+    <WixVariable Id='WixUISupportPerUser' Value='${WixUISupportPerUser}' />
+    <WixVariable Id='WixUISupportPerMachine' Value='${WixUISupportPerMachine}' />
+
+    <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='${LaunchApplicationChecked}' />
+    <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch ${ProductNameLoc}' />
+    <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
+    <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
+    
+    <Property Id='WixQuietExecCmdLine' Value='"[WindowsFolder]\System32\taskkill.exe" /F /IM ${MainExecutable}'/>
+    <CustomAction Id='KillProcess' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
+    <InstallExecuteSequence>
+      ${KillProcess}
+    </InstallExecuteSequence>
+    
+    <WixVariable Id='WixUILicenseRtf' Value='${LicenseFile}' />
+    
+    <UI>
+      <UIRef Id='WixUI_Advanced' />
+      <UIRef Id='WixUI_ErrorProgressText' />
+      
+      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='1' Order='3'>WixAppFolder = 'WixPerUserFolder'</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='{}' Order='2'>WixAppFolder = 'WixPerMachineFolder'</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = 'WixPerMachineFolder'</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerUserFolder' Order='3'>WixAppFolder = 'WixPerUserFolder'</Publish>
+       
+      ${LaunchApplication}
+    </UI>
+  </Product>
+</Wix>
