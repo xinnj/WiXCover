@@ -143,6 +143,8 @@ if ($config.Regs.ConvertToHkMU)
     (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
 }
 
+$localizations = (Get-Content $PSScriptRoot\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
+
 foreach ($OneLoc in $config.Localization)
 {
     foreach ($k in $OneLoc.Keys) {
@@ -150,6 +152,14 @@ foreach ($OneLoc in $config.Localization)
             $VarsList.$k = $OneLoc.$k
         } else {
             $VarsList.Add($k, $OneLoc.$k)
+        }
+    }
+
+    foreach ($k in $localizations.$Culture.Keys) {
+        if ($VarsList.ContainsKey($k)) {
+            $VarsList.$k = $localizations.$Culture.$k
+        } else {
+            $VarsList.Add($k, $localizations.$Culture.$k)
         }
     }
 
