@@ -20,6 +20,8 @@ function AddOrUpdateList ([Hashtable]$MyList, [String]$MyKey, [String]$MyValue) 
     }
 }
 
+#Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser
+#Install-Module powershell-yaml -Scope CurrentUser
 Import-Module powershell-yaml
 
 $WorkingDir = @(Get-Location).Path
@@ -129,13 +131,13 @@ else
     $VarsList.Add("LaunchApplicationChecked", "0")
 }
 
-$folder = @($config.Files.RootFolder -replace '\\$', '')
-heat dir "$folder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
+$FileRootfolder = @($config.Files.RootFolder -replace '\\$', '')
+heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
 ThrowOnNativeFailure
 
 Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
-$folder = @($config.Regs.RootFolder -replace '\\$', '')
-Get-ChildItem -Path "$folder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
+$RegRootfolder = @($config.Regs.RootFolder -replace '\\$', '')
+Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
 heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
 ThrowOnNativeFailure
 if ($config.Regs.ConvertToHkMU)
@@ -155,11 +157,11 @@ foreach ($OneLoc in $config.Localization)
         }
     }
 
-    foreach ($k in $localizations.$Culture.Keys) {
+    foreach ($k in $localizations[@($VarsList.Culture)].Keys) {
         if ($VarsList.ContainsKey($k)) {
-            $VarsList.$k = $localizations.$Culture.$k
+            $VarsList.$k = $localizations[@($VarsList.Culture)].$k
         } else {
-            $VarsList.Add($k, $localizations.$Culture.$k)
+            $VarsList.Add($k, $localizations[@($VarsList.Culture)].$k)
         }
     }
 
@@ -178,6 +180,16 @@ foreach ($OneLoc in $config.Localization)
         $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
     }
 
-    $Template > 2.wxs
+    $Count = $Template | select-string -pattern "Guid" -AllMatches -Encoding utf8
+    $Count
+    $Count.length
 
+    $MainFileName = [string]@($VarsList.Culture) + '.wsx'
+    Out-File -InputObject $Template -FilePath $WorkingDir\$MainFileName -Encoding utf8 -Force
+
+    candle $WorkingDir\$MainFileName $WorkingDir\FileGroup.wxs $WorkingDir\RegGroup.wxs
+
+    $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
+    $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b $FileRootfolder -o $WorkingDir\final.msi $WorkingDir\$MainObjName $WorkingDir\FileGroup.wixobj $WorkingDir\RegGroup.wixobj
 }
