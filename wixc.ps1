@@ -27,6 +27,8 @@ Import-Module powershell-yaml
 $WorkingDir = @(Get-Location).Path
 New-Item -ItemType Directory -Force -Path "$WorkingDir"
 
+$FinalMsiFile = 'final.msi'
+
 $config = (Get-Content .\config.yaml -Encoding UTF8 | ConvertFrom-Yaml)
 
 $VarsList = @{ }
@@ -152,8 +154,8 @@ if ($config.Regs.ConvertToHkMU)
 }
 
 # Localiztion
+$CultureLanguage = [ordered]@{}
 $localizations = (Get-Content $PSScriptRoot\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
-
 foreach ($OneLoc in $config.Localization)
 {
     foreach ($k in $OneLoc.Keys) {
@@ -182,6 +184,8 @@ foreach ($OneLoc in $config.Localization)
         New-Variable -Name "$k" -Value @($VarsList.$k)
     }
 
+    $CultureLanguage.Add($VarsList.Culture, $VarsList.Language)
+
     # Substitude all variables in template file
     [string]$Template = Get-Content -Path "$PSScriptRoot\template.wxs" -Encoding UTF8
     foreach ($k in $VarsList.Keys) {
@@ -200,8 +204,31 @@ foreach ($OneLoc in $config.Localization)
     Out-File -InputObject $Template -FilePath $WorkingDir\$MainFileName -Encoding utf8 -Force
 
     candle $WorkingDir\$MainFileName $WorkingDir\FileGroup.wxs $WorkingDir\RegGroup.wxs
+    ThrowOnNativeFailure
 
     $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
+    $MsiName = [string]@($VarsList.Culture) + '.msi'
     $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b $FileRootfolder -o $WorkingDir\final.msi $WorkingDir\$MainObjName $WorkingDir\FileGroup.wixobj $WorkingDir\RegGroup.wixobj
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b $FileRootfolder -o $WorkingDir\$MsiName $WorkingDir\$MainObjName $WorkingDir\FileGroup.wixobj $WorkingDir\RegGroup.wixobj
+    ThrowOnNativeFailure
 }
+
+$FirstCulture = ""
+if (([Hashtable]$CultureLanguage).Count -gt 1) {
+    foreach ($k in $CultureLanguage.Keys) {
+        if ($FirstCulture -eq "") {
+            $FirstCulture = $k
+        } else {
+            $CurrentCulture = $k
+            torch -t language ${FirstCulture}`.msi ${CurrentCulture}`.msi -out ${CurrentCulture}`.mst
+            cscript $PSScriptRoot\WiSubStg.vbs ${FirstCulture}`.msi ${CurrentCulture}`.mst $CultureLanguage.$k
+        }
+    }
+
+    $Languages = [Array]$CultureLanguage.Values -join ','
+    cscript $PSScriptRoot\WiLangId.vbs ${FirstCulture}`.msi Package $Languages
+} else {
+    $FirstCulture = $CultureLanguage[0]
+}
+
+Move-Item -Force $WorkingDir\$FirstCulture`.msi $WorkingDir\$FinalMsiFile

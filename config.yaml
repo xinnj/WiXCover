@@ -10,11 +10,11 @@ Localization:
   ProductNameLoc: 'My Product'
   ManufacturerLoc: 'My Company'
   LicenseFile: 'license-en.rtf'
-#-
-#  Culture: 'zh-cn'
-#  ProductNameLoc: '我的产品'
-#  ManufacturerLoc: '我的公司'
-#  LicenseFile: 'license-chs.rtf'
+-
+  Culture: 'zh-cn'
+  ProductNameLoc: '我的产品'
+  ManufacturerLoc: '我的公司'
+  LicenseFile: 'license-chs.rtf'
 
 Files:
   RootFolder: 'c:\tmp\samplefirst-m\source root\'
