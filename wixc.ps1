@@ -42,6 +42,7 @@ $VarsList.Add("IconIndex",$config.Files.Icon.Index.ToString())
 $IconExt = $config.Files.Icon.File.split('.')[-1]
 $VarsList.Add("IconId", "icon." + $IconExt)
 
+# Upgrade method
 if ($config.Upgrade.AllowDowngrades)
 {
     $VarsList.Add("AllowDowngrades", "yes")
@@ -59,6 +60,7 @@ else
     $VarsList.Add("AllowSameVersionUpgrades", "no")
 }
 
+# Install scope
 switch ($config.InstallScope.Mode)
 {
     'both' {
@@ -104,6 +106,7 @@ switch ($config.InstallScope.Mode)
     }
 }
 
+# Kill process
 if ($config.KillProcess)
 {
     $VarsList.Add("KillProcess", "<Custom Action='KillProcess' Before='InstallValidate'/>")
@@ -113,28 +116,31 @@ else
     $VarsList.Add("KillProcess", "<!-- <Custom Action='KillProcess' Before='InstallValidate'/> -->")
 }
 
+# Launch app
 if ($config.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
     if ($config.LaunchApplication.CheckedByDefault)
     {
-        $VarsList.Add("LaunchApplicationChecked", "1")
+        $VarsList.Add("LaunchApplicationChecked", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' />")
     }
     else
     {
-        $VarsList.Add("LaunchApplicationChecked", "0")
+        $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
     }
 }
 else
 {
     $VarsList.Add("LaunchApplication", "<!-- <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish> -->")
-    $VarsList.Add("LaunchApplicationChecked", "0")
+    $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
 }
 
+# Generate file group
 $FileRootfolder = @($config.Files.RootFolder -replace '\\$', '')
 heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
 ThrowOnNativeFailure
 
+# Generate reg group
 Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
 $RegRootfolder = @($config.Regs.RootFolder -replace '\\$', '')
 Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
@@ -145,6 +151,7 @@ if ($config.Regs.ConvertToHkMU)
     (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
 }
 
+# Localiztion
 $localizations = (Get-Content $PSScriptRoot\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
 
 foreach ($OneLoc in $config.Localization)
@@ -175,14 +182,19 @@ foreach ($OneLoc in $config.Localization)
         New-Variable -Name "$k" -Value @($VarsList.$k)
     }
 
+    # Substitude all variables in template file
     [string]$Template = Get-Content -Path "$PSScriptRoot\template.wxs" -Encoding UTF8
     foreach ($k in $VarsList.Keys) {
         $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
     }
 
-    $Count = $Template | select-string -pattern "Guid" -AllMatches -Encoding utf8
-    $Count
-    $Count.length
+    # Substitude all guid in template file
+    $Count = ([regex]::Matches($Template, "Guid=''" )).count
+    for($i = 1; $i -le $Count; $i++) {
+        $Guid = [guid]::NewGuid().ToString()
+        [regex]$Pattern = "Guid=''"
+        $Template = $Pattern.replace($Template, "Guid='$Guid'", 1)
+    }
 
     $MainFileName = [string]@($VarsList.Culture) + '.wsx'
     Out-File -InputObject $Template -FilePath $WorkingDir\$MainFileName -Encoding utf8 -Force

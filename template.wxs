@@ -22,7 +22,7 @@
 
       <Directory Id='ProgramMenuFolder' Name='Programs'>
         <Directory Id='ProgramMenuDir' Name='${ProductName}'>
-          <Component Id='ProgramMenuDir' Guid='*'>
+          <Component Id='ProgramMenuDir' Guid=''>
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
             <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
             <Shortcut Id='startmenushortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
@@ -34,7 +34,7 @@
       </Directory>
 
       <Directory Id='DesktopFolder' Name='Desktop' >
-        <Component Id='DesktopMenuDir' Guid='*'>
+        <Component Id='DesktopMenuDir' Guid=''>
           <RemoveFolder Id='DesktopMenuDir' On='uninstall' />
           <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
           <Shortcut Id='desktopshortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
@@ -63,7 +63,7 @@
     <WixVariable Id='WixUISupportPerUser' Value='${WixUISupportPerUser}' />
     <WixVariable Id='WixUISupportPerMachine' Value='${WixUISupportPerMachine}' />
 
-    <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='${LaunchApplicationChecked}' />
+    ${LaunchApplicationChecked}
     <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch ${ProductNameLoc}' />
     <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
     <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
@@ -80,10 +80,10 @@
       <UIRef Id='WixUI_Advanced' />
       <UIRef Id='WixUI_ErrorProgressText' />
       
-      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='1' Order='3'>WixAppFolder = 'WixPerUserFolder'</Publish>
-      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='{}' Order='2'>WixAppFolder = 'WixPerMachineFolder'</Publish>
-      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = 'WixPerMachineFolder'</Publish>
-      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerUserFolder' Order='3'>WixAppFolder = 'WixPerUserFolder'</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='1' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='{}' Order='2'>WixAppFolder = "WixPerMachineFolder"</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = "WixPerMachineFolder"</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerUserFolder' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
        
       ${LaunchApplication}
     </UI>

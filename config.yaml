@@ -42,4 +42,4 @@ KillProcess: true
 
 LaunchApplication:
   Enable: true
-  CheckedByDefault: false
+  CheckedByDefault: true
