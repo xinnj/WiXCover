@@ -221,12 +221,15 @@ if (([Hashtable]$CultureLanguage).Count -gt 1) {
         } else {
             $CurrentCulture = $k
             torch -t language ${FirstCulture}`.msi ${CurrentCulture}`.msi -out ${CurrentCulture}`.mst
+            ThrowOnNativeFailure
             cscript $PSScriptRoot\WiSubStg.vbs ${FirstCulture}`.msi ${CurrentCulture}`.mst $CultureLanguage.$k
+            ThrowOnNativeFailure
         }
     }
 
     $Languages = [Array]$CultureLanguage.Values -join ','
     cscript $PSScriptRoot\WiLangId.vbs ${FirstCulture}`.msi Package $Languages
+    ThrowOnNativeFailure
 } else {
     $FirstCulture = $CultureLanguage[0]
 }
