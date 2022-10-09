@@ -1,5 +1,12 @@
-# todo: set working dir
-# todo: config file congiguable
+#Requires -Version 5.1
+
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory)][string]$Config,
+    [Parameter(Mandatory)][string]$Output,
+    [string]$TemplateFile = "$PSScriptRoot\template.wxs",
+    [string]$WorkingDir = $(Join-Path $env:TEMP "~wixc")
+)
 
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
@@ -22,28 +29,25 @@ function AddOrUpdateList ([Hashtable]$MyList, [String]$MyKey, [String]$MyValue) 
 $Env:PATH = "$PSScriptRoot\WiX-v3.11\bin;" + $Env:PATH
 Import-Module $PSScriptRoot\powershell-yaml
 
-$WorkingDir = Join-Path @(Get-Location).Path "~tmp"
 New-Item -ItemType Directory -Force -Path "$WorkingDir"
 
-$FinalMsiFile = 'final.msi'
-
-$config = (Get-Content .\tests\config.yaml -Encoding UTF8 | ConvertFrom-Yaml)
+$ConfigYaml = (Get-Content $Config -Encoding UTF8 | ConvertFrom-Yaml)
 
 $VarsList = @{ }
-$VarsList.Add("ProductName", $config.Product.Name)
-$VarsList.Add("ProductVersion", $config.Product.Version)
-$VarsList.Add("UpgradeCode", $config.UpgradeCode)
-$VarsList.Add("Manufacturer", $config.Manufacturer)
-$VarsList.Add("MainExecutable", $config.Files.MainExecutable)
+$VarsList.Add("ProductName", $ConfigYaml.Product.Name)
+$VarsList.Add("ProductVersion", $ConfigYaml.Product.Version)
+$VarsList.Add("UpgradeCode", $ConfigYaml.UpgradeCode)
+$VarsList.Add("Manufacturer", $ConfigYaml.Manufacturer)
+$VarsList.Add("MainExecutable", $ConfigYaml.Files.MainExecutable)
 
 
-$VarsList.Add("IconFile", $config.Files.Icon.File)
-$VarsList.Add("IconIndex",$config.Files.Icon.Index.ToString())
-$IconExt = $config.Files.Icon.File.split('.')[-1]
+$VarsList.Add("IconFile", $ConfigYaml.Files.Icon.File)
+$VarsList.Add("IconIndex",$ConfigYaml.Files.Icon.Index.ToString())
+$IconExt = $ConfigYaml.Files.Icon.File.split('.')[-1]
 $VarsList.Add("IconId", "icon." + $IconExt)
 
 # Upgrade method
-if ($config.Upgrade.AllowDowngrades)
+if ($ConfigYaml.Upgrade.AllowDowngrades)
 {
     $VarsList.Add("AllowDowngrades", "yes")
 }
@@ -51,7 +55,7 @@ else
 {
     $VarsList.Add("AllowDowngrades", "no")
 }
-if ($config.Upgrade.AllowSameVersionUpgrades)
+if ($ConfigYaml.Upgrade.AllowSameVersionUpgrades)
 {
     $VarsList.Add("AllowSameVersionUpgrades", "yes")
 }
@@ -61,12 +65,12 @@ else
 }
 
 # Install scope
-switch ($config.InstallScope.Mode)
+switch ($ConfigYaml.InstallScope.Mode)
 {
     'both' {
         $VarsList.Add("WixUISupportPerUser", "1")
         $VarsList.Add("WixUISupportPerMachine", "1")
-        switch ($config.InstallScope.DefaultMode)
+        switch ($ConfigYaml.InstallScope.DefaultMode)
         {
             'user' {
                 $VarsList.Add("WixAppFolder", "WixPerUserFolder")
@@ -107,7 +111,7 @@ switch ($config.InstallScope.Mode)
 }
 
 # Kill process
-if ($config.KillProcess)
+if ($ConfigYaml.KillProcess)
 {
     $VarsList.Add("KillProcess", "<Custom Action='KillProcess' Before='InstallValidate'/>")
 }
@@ -117,10 +121,10 @@ else
 }
 
 # Launch app
-if ($config.LaunchApplication.Enable)
+if ($ConfigYaml.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
-    if ($config.LaunchApplication.CheckedByDefault)
+    if ($ConfigYaml.LaunchApplication.CheckedByDefault)
     {
         $VarsList.Add("LaunchApplicationChecked", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' />")
     }
@@ -136,17 +140,17 @@ else
 }
 
 # Generate file group
-$FileRootfolder = @($config.Files.RootFolder -replace '\\$', '')
+$FileRootfolder = @($ConfigYaml.Files.RootFolder -replace '\\$', '')
 heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
 ThrowOnNativeFailure
 
 # Generate reg group
 Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
-$RegRootfolder = @($config.Regs.RootFolder -replace '\\$', '')
+$RegRootfolder = @($ConfigYaml.Regs.RootFolder -replace '\\$', '')
 Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
 heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
 ThrowOnNativeFailure
-if ($config.Regs.ConvertToHkMU)
+if ($ConfigYaml.Regs.ConvertToHkMU)
 {
     (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
 }
@@ -154,7 +158,7 @@ if ($config.Regs.ConvertToHkMU)
 # Localiztion
 $CultureLanguage = [ordered]@{}
 $localizations = (Get-Content $PSScriptRoot\i18n\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
-foreach ($OneLoc in $config.Localization)
+foreach ($OneLoc in $ConfigYaml.Localization)
 {
     foreach ($k in $OneLoc.Keys) {
         if ($VarsList.ContainsKey($k)) {
@@ -185,7 +189,7 @@ foreach ($OneLoc in $config.Localization)
     $CultureLanguage.Add($VarsList.Culture, $VarsList.Language)
 
     # Substitude all variables in template file
-    [string]$Template = Get-Content -Path "$PSScriptRoot\template.wxs" -Encoding UTF8
+    [string]$Template = Get-Content -Path "$TemplateFile" -Encoding UTF8
     foreach ($k in $VarsList.Keys) {
         $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
     }
@@ -199,10 +203,10 @@ foreach ($OneLoc in $config.Localization)
     }
 
     $MainFileName = [string]@($VarsList.Culture) + '.wsx'
-    Out-File -InputObject $Template -FilePath $WorkingDir\$MainFileName -Encoding utf8 -Force
+    Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
     Push-Location
-    Set-Location $WorkingDir
+    Set-Location "$WorkingDir"
     candle $MainFileName FileGroup.wxs RegGroup.wxs
     ThrowOnNativeFailure
     Pop-Location
@@ -210,7 +214,7 @@ foreach ($OneLoc in $config.Localization)
     $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
     $MsiName = [string]@($VarsList.Culture) + '.msi'
     $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b $FileRootfolder -o $WorkingDir\$MsiName $WorkingDir\$MainObjName $WorkingDir\FileGroup.wixobj $WorkingDir\RegGroup.wixobj
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj"
     ThrowOnNativeFailure
 }
 
@@ -221,18 +225,22 @@ if (([Hashtable]$CultureLanguage).Count -gt 1) {
             $FirstCulture = $k
         } else {
             $CurrentCulture = $k
-            torch -t language $WorkingDir\${FirstCulture}`.msi $WorkingDir\${CurrentCulture}`.msi -out $WorkingDir\${CurrentCulture}`.mst
+            torch -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
             ThrowOnNativeFailure
-            cscript $PSScriptRoot\i18n\WiSubStg.vbs $WorkingDir\${FirstCulture}`.msi $WorkingDir\${CurrentCulture}`.mst $CultureLanguage.$k
+            cscript $PSScriptRoot\i18n\WiSubStg.vbs "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.mst" $CultureLanguage.$k
             ThrowOnNativeFailure
         }
     }
 
     $Languages = [Array]$CultureLanguage.Values -join ','
-    cscript $PSScriptRoot\i18n\WiLangId.vbs $WorkingDir\${FirstCulture}`.msi Package $Languages
+    cscript $PSScriptRoot\i18n\WiLangId.vbs "$WorkingDir\${FirstCulture}`.msi" Package $Languages
     ThrowOnNativeFailure
 } else {
     $FirstCulture = $CultureLanguage[0]
 }
 
-Move-Item -Force $WorkingDir\$FirstCulture`.msi $FinalMsiFile
+Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
+
+if (-not $PSBoundParameters['Debug']) {
+    Remove-Item -Force -Recurse "$WorkingDir"
+}

@@ -41,5 +41,5 @@ InstallScope:
 KillProcess: false
 
 LaunchApplication:
-  Enable: true
+  Enable: false
   CheckedByDefault: true
