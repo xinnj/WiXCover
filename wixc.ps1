@@ -20,12 +20,12 @@
     The directory to store the temporary files.
 #>
 
-[CmdletBinding()]
+    [CmdletBinding()]
 param (
     [Parameter(Mandatory)][string]$Config,
     [Parameter(Mandatory)][string]$Output,
     [string]$TemplateFile = "$PSScriptRoot\template.wxs",
-    [string]$WorkingDir = $(Join-Path $env:TEMP "~wixc")
+    [string]$WorkingDir = $( Join-Path $env:TEMP "~wixc" )
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,10 +38,14 @@ function ThrowOnNativeFailure
     }
 }
 
-function AddOrUpdateList ([Hashtable]$MyList, [String]$MyKey, [String]$MyValue) {
-    if ($MyList.ContainsKey($MyKey)) {
+function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
+{
+    if ( $MyList.ContainsKey($MyKey))
+    {
         $MyList[$MyKey] = $MyValue
-    } else {
+    }
+    else
+    {
         $MyList.Add($MyKey, $ValMyValueue)
     }
 }
@@ -144,6 +148,9 @@ else
 if ($ConfigYaml.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
+
+    $VarsList.Add("LaunchApplicationText", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch `${ProductNameLoc}' />")
+
     if ($ConfigYaml.LaunchApplication.CheckedByDefault)
     {
         $VarsList.Add("LaunchApplicationChecked", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' />")
@@ -157,6 +164,8 @@ else
 {
     $VarsList.Add("LaunchApplication", "<!-- <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish> -->")
     $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
+    $VarsList.Add("LaunchApplicationText", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch `${ProductNameLoc}' /> -->")
+
 }
 
 # Generate file group
@@ -176,28 +185,37 @@ if ($ConfigYaml.Regs.ConvertToHkMU)
 }
 
 # Localiztion
-$CultureLanguage = [ordered]@{}
+$CultureLanguage = [ordered]@{ }
 $localizations = (Get-Content $PSScriptRoot\i18n\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
 foreach ($OneLoc in $ConfigYaml.Localization)
 {
-    foreach ($k in $OneLoc.Keys) {
-        if ($VarsList.ContainsKey($k)) {
+    foreach ($k in $OneLoc.Keys)
+    {
+        if ( $VarsList.ContainsKey($k))
+        {
             $VarsList.$k = $OneLoc.$k
-        } else {
+        }
+        else
+        {
             $VarsList.Add($k, $OneLoc.$k)
         }
     }
 
-    foreach ($k in $localizations[@($VarsList.Culture)].Keys) {
-        if ($VarsList.ContainsKey($k)) {
+    foreach ($k in $localizations[@($VarsList.Culture)].Keys)
+    {
+        if ( $VarsList.ContainsKey($k))
+        {
             $VarsList.$k = $localizations[@($VarsList.Culture)].$k
-        } else {
+        }
+        else
+        {
             $VarsList.Add($k, $localizations[@($VarsList.Culture)].$k)
         }
     }
 
     # make sure all vars are not empty
-    foreach ($k in $VarsList.Keys) {
+    foreach ($k in $VarsList.Keys)
+    {
         if ($VarsList.$k -eq "")
         {
             throw "$k is empty!"
@@ -210,12 +228,13 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     # Substitude all variables in template file
     [string]$Template = Get-Content -Path "$TemplateFile" -Encoding UTF8
-    foreach ($k in $VarsList.Keys) {
+    foreach ($k in $VarsList.Keys)
+    {
         $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
     }
 
     # Substitude all guid in template file
-    $Count = ([regex]::Matches($Template, "Guid=''" )).count
+    $Count = ([regex]::Matches($Template, "Guid=''")).count
     for($i = 1; $i -le $Count; $i++) {
         $Guid = [guid]::NewGuid().ToString()
         [regex]$Pattern = "Guid=''"
@@ -239,11 +258,16 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 }
 
 $FirstCulture = ""
-if (([Hashtable]$CultureLanguage).Count -gt 1) {
-    foreach ($k in $CultureLanguage.Keys) {
-        if ($FirstCulture -eq "") {
+if (([Hashtable]$CultureLanguage).Count -gt 1)
+{
+    foreach ($k in $CultureLanguage.Keys)
+    {
+        if ($FirstCulture -eq "")
+        {
             $FirstCulture = $k
-        } else {
+        }
+        else
+        {
             $CurrentCulture = $k
             torch -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
             ThrowOnNativeFailure
@@ -255,12 +279,15 @@ if (([Hashtable]$CultureLanguage).Count -gt 1) {
     $Languages = [Array]$CultureLanguage.Values -join ','
     cscript $PSScriptRoot\i18n\WiLangId.vbs "$WorkingDir\${FirstCulture}`.msi" Package $Languages
     ThrowOnNativeFailure
-} else {
+}
+else
+{
     $FirstCulture = $CultureLanguage[0]
 }
 
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
 
-if (-not $PSBoundParameters['Debug']) {
+if (-not$PSBoundParameters['Debug'])
+{
     Remove-Item -Force -Recurse "$WorkingDir"
 }
