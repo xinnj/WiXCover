@@ -44,7 +44,7 @@ Files:
 
   Icon:
     # The file providing application icon. Relative path starting at the root folder defined above.
-    File: ''
+    File: 'wixc.ico'
     Index: 0
 
 Regs:
