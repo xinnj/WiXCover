@@ -1,5 +1,4 @@
 # todo: set working dir
-# todo: check wix installed
 # todo: config file congiguable
 
 $ErrorActionPreference = "Stop"
@@ -20,16 +19,15 @@ function AddOrUpdateList ([Hashtable]$MyList, [String]$MyKey, [String]$MyValue) 
     }
 }
 
-#Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser
-#Install-Module powershell-yaml -Scope CurrentUser
-Import-Module powershell-yaml
+$Env:PATH = "$PSScriptRoot\WiX-v3.11\bin;" + $Env:PATH
+Import-Module $PSScriptRoot\powershell-yaml
 
-$WorkingDir = @(Get-Location).Path
+$WorkingDir = Join-Path @(Get-Location).Path "~tmp"
 New-Item -ItemType Directory -Force -Path "$WorkingDir"
 
 $FinalMsiFile = 'final.msi'
 
-$config = (Get-Content .\config.yaml -Encoding UTF8 | ConvertFrom-Yaml)
+$config = (Get-Content .\tests\config.yaml -Encoding UTF8 | ConvertFrom-Yaml)
 
 $VarsList = @{ }
 $VarsList.Add("ProductName", $config.Product.Name)
@@ -155,7 +153,7 @@ if ($config.Regs.ConvertToHkMU)
 
 # Localiztion
 $CultureLanguage = [ordered]@{}
-$localizations = (Get-Content $PSScriptRoot\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
+$localizations = (Get-Content $PSScriptRoot\i18n\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
 foreach ($OneLoc in $config.Localization)
 {
     foreach ($k in $OneLoc.Keys) {
@@ -203,8 +201,11 @@ foreach ($OneLoc in $config.Localization)
     $MainFileName = [string]@($VarsList.Culture) + '.wsx'
     Out-File -InputObject $Template -FilePath $WorkingDir\$MainFileName -Encoding utf8 -Force
 
-    candle $WorkingDir\$MainFileName $WorkingDir\FileGroup.wxs $WorkingDir\RegGroup.wxs
+    Push-Location
+    Set-Location $WorkingDir
+    candle $MainFileName FileGroup.wxs RegGroup.wxs
     ThrowOnNativeFailure
+    Pop-Location
 
     $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
     $MsiName = [string]@($VarsList.Culture) + '.msi'
@@ -220,18 +221,18 @@ if (([Hashtable]$CultureLanguage).Count -gt 1) {
             $FirstCulture = $k
         } else {
             $CurrentCulture = $k
-            torch -t language ${FirstCulture}`.msi ${CurrentCulture}`.msi -out ${CurrentCulture}`.mst
+            torch -t language $WorkingDir\${FirstCulture}`.msi $WorkingDir\${CurrentCulture}`.msi -out $WorkingDir\${CurrentCulture}`.mst
             ThrowOnNativeFailure
-            cscript $PSScriptRoot\WiSubStg.vbs ${FirstCulture}`.msi ${CurrentCulture}`.mst $CultureLanguage.$k
+            cscript $PSScriptRoot\i18n\WiSubStg.vbs $WorkingDir\${FirstCulture}`.msi $WorkingDir\${CurrentCulture}`.mst $CultureLanguage.$k
             ThrowOnNativeFailure
         }
     }
 
     $Languages = [Array]$CultureLanguage.Values -join ','
-    cscript $PSScriptRoot\WiLangId.vbs ${FirstCulture}`.msi Package $Languages
+    cscript $PSScriptRoot\i18n\WiLangId.vbs $WorkingDir\${FirstCulture}`.msi Package $Languages
     ThrowOnNativeFailure
 } else {
     $FirstCulture = $CultureLanguage[0]
 }
 
-Move-Item -Force $WorkingDir\$FirstCulture`.msi $WorkingDir\$FinalMsiFile
+Move-Item -Force $WorkingDir\$FirstCulture`.msi $FinalMsiFile

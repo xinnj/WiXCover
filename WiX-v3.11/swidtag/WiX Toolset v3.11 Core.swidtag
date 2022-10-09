@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity tagId="msi:package/036EC498-8FA7-46FF-9240-9E1DED4C5114" name="WiX Toolset v3.11 Core" version="3.11.4516.0" versionScheme="multipartnumeric" xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd">
+  <Entity name=".NET Foundation" regid="wixtoolset.org" role="softwareCreator tagCreator" />
+  <Meta persistentId="msi:upgrade/3618724B-2523-44F9-A908-866AA619504D" />
+</SoftwareIdentity>

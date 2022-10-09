@@ -1,0 +1,21 @@
+en-us:
+  Language: '1033'
+  Codepage: '1252'
+  LocInstaller: 'Installer'
+  LocDowngradeErrorMessage: 'A later version of the product is already installed.'
+  LocUninstall: 'Uninstall'
+  LocLaunch: 'Launch'
+zh-cn:
+  Language: '2052'
+  Codepage: '936'
+  LocInstaller: '安装程序'
+  LocDowngradeErrorMessage: '已安装该产品的新版本。'
+  LocUninstall: '卸载'
+  LocLaunch: '启动'
+zh-tw:
+  Language: '1028'
+  Codepage: '950'
+  LocInstaller: '安裝程式'
+  LocDowngradeErrorMessage: '已安裝該產品的新版本。'
+  LocUninstall: '卸載'
+  LocLaunch: '啟動'

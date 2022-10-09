@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity tagId="wix:bundle/7A940384-EE12-4443-8AA3-2AB82DF2372A" name="WiX Toolset v3.11.2.4516" version="3.11.2.4516" versionScheme="multipartnumeric" xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd">
+  <Entity name=".NET Foundation" regid="wixtoolset.org" role="softwareCreator tagCreator" />
+  <Meta persistentId="wix:bundle.upgrade/65E893AD-EDD5-4E7D-80CA-F0F50F383532" />
+  <Link rel="component" href="swid:msi:package/036EC498-8FA7-46FF-9240-9E1DED4C5114" />
+  <Link rel="component" href="swid:msi:package/FD452F7B-2BA7-450A-80F9-94FD4727FAFF" />
+  <Link rel="component" href="swid:msi:package/C7203CFE-F690-447B-8531-851D0A9E6C24" />
+  <Link rel="component" href="swid:msi:package/5E30568D-9B4F-4950-AF87-F7D154DFD8BF" />
+  <Link rel="component" href="swid:msi:package/370A3961-91A2-4ED2-9FBD-B3838227826C" />
+  <Link rel="component" href="swid:msi:package/F9EB9314-00FC-4CFB-AFD2-6A72FB038D10" />
+  <Link rel="component" href="swid:msi:package/F8617143-2B63-47DB-B205-F6FB6CBCB13E" />
+  <Link rel="component" href="swid:msi:package/BFCD4355-E52E-47BA-BE8A-8474CAD8130E" />
+</SoftwareIdentity>
