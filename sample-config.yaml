@@ -1,0 +1,81 @@
+Product:
+  # Will be part of installation path, English only is preferred.
+  Name: ''
+
+  # will be used to control upgrade process
+  Version: ''
+
+# A GUID code. Should be kept unchanged for various versions of same product, but different with other products.
+# Can use the command below to generate.
+# powershell.exe -nologo -noprofile -command "[guid]::NewGuid().ToString().ToUpper()"
+UpgradeCode: ''
+
+# Will be part of installation path, English only is preferred.
+Manufacturer: ''
+
+# At least one culture is needed. Supported culture can be found at:
+# https://www.firegiant.com/wix/tutorial/user-interface/do-you-speak-english/
+Localization:
+-
+  # Culture name
+  Culture: 'en-us'
+
+  # Product name in localized language
+  ProductNameLoc: ''
+
+  # Manufacture name in localized language
+  ManufacturerLoc: ''
+
+  # License agreement terms in localized language, RTF format is needed.
+  LicenseFile: ''
+#-
+#  Culture: 'zh-cn'
+#  ProductNameLoc: ''
+#  ManufacturerLoc: ''
+#  LicenseFile: ''
+
+Files:
+  # The files and directories in the installer package that will be installed on customers' computer.
+  # Root folder itself will NOT be included.
+  RootFolder: ''
+
+  # The target file that the shortcuts point to. Relative path starting at the root folder defined above.
+  MainExecutable: ''
+
+  Icon:
+    # The file providing application icon. Relative path starting at the root folder defined above.
+    File: ''
+    Index: 0
+
+Regs:
+  # The directory containing exported registry files.
+  RootFolder: ''
+
+  # Set to 'true', all 'HKCU' and "HKLM" root path will be converted to 'HKMU'.
+  ConvertToHKMU: true
+
+Upgrade:
+  # A lower version package can be installed or not.
+  AllowDowngrades: false
+
+  # The same version package can be installed or not.
+  AllowSameVersionUpgrades: true
+
+# user / machine
+InstallScope:
+  # 'user': install just for current user
+  # 'machine': install for all users of the machine
+  # 'both': user can select the installation mode
+  Mode: ''
+  # the default mode if Mode = 'both'
+  DefaultMode: 'machine'
+
+# Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
+KillProcess: false
+
+LaunchApplication:
+  # Show a checkbox to launch the application after the installation if enabled.
+  Enable: false
+
+  # The checkbox is checked or not by default.
+  CheckedByDefault: true
