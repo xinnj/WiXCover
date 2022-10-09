@@ -38,7 +38,7 @@ InstallScope:
   # the default mode if Mode = both
   DefaultMode: 'machine'
 
-KillProcess: false
+KillProcess: true
 
 LaunchApplication:
   Enable: false

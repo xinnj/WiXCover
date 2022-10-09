@@ -143,6 +143,7 @@ else
 {
     $VarsList.Add("KillProcess", "<!-- <Custom Action='KillProcess' Before='InstallValidate'/> -->")
 }
+$VarsList.Add("ProcessName", @(Split-Path $VarsList.MainExecutable -leaf))
 
 # Launch app
 if ($ConfigYaml.LaunchApplication.Enable)

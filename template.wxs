@@ -68,7 +68,7 @@
     <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
     <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
     
-    <Property Id='WixQuietExecCmdLine' Value='"[WindowsFolder]\System32\taskkill.exe" /F /IM ${MainExecutable}'/>
+    <Property Id='WixQuietExecCmdLine' Value='"[WindowsFolder]\System32\taskkill.exe" /F /IM ${ProcessName}'/>
     <CustomAction Id='KillProcess' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
     <InstallExecuteSequence>
       ${KillProcess}
