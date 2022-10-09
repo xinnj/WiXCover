@@ -1,5 +1,25 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+    Build MSI package based on yaml config.
+
+.DESCRIPTION
+    Build MSI package based on yaml config.
+
+.PARAMETER Config
+    The yaml config file.
+
+.PARAMETER Output
+    The output MSI package file.
+
+.PARAMETER TemplateFile
+    The template file used by WiX as source file. Will use the default one if not provided.
+
+.PARAMETER WorkingDir
+    The directory to store the temporary files.
+#>
+
 [CmdletBinding()]
 param (
     [Parameter(Mandatory)][string]$Config,
