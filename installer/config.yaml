@@ -1,0 +1,81 @@
+Product:
+  # Will be part of installation path, English only is preferred.
+  Name: 'WiXCover'
+
+  # will be used to control upgrade process
+  Version: '1.0.0'
+
+# A GUID code. Should be kept unchanged for various versions of same product, but different with other products.
+# Can use the command below to generate.
+# powershell.exe -nologo -noprofile -command "[guid]::NewGuid().ToString().ToUpper()"
+UpgradeCode: '84BE861F-CCF3-4582-80C3-C1BB5ABEA852'
+
+# Will be part of installation path, English only is preferred.
+Manufacturer: 'iCD'
+
+# At least one culture is needed. Supported culture can be found at:
+# https://www.firegiant.com/wix/tutorial/user-interface/do-you-speak-english/
+Localization:
+-
+  # Culture name
+  Culture: 'en-us'
+
+  # Product name in localized language
+  ProductNameLoc: 'WiX Cover'
+
+  # Manufacture name in localized language
+  ManufacturerLoc: 'iCD'
+
+  # License agreement terms in localized language, RTF format is needed.
+  LicenseFile: 'license.rtf'
+-
+  Culture: 'zh-cn'
+  ProductNameLoc: 'WiX Cover'
+  ManufacturerLoc: 'iCD'
+  LicenseFile: 'license.rtf'
+
+Files:
+  # The files and directories in the installer package that will be installed on customers' computer.
+  # Root folder itself will NOT be included.
+  RootFolder: 'source'
+
+  # The target file that the shortcuts point to. Relative path starting at the root folder defined above.
+  MainExecutable: 'wixc.ps1'
+
+  Icon:
+    # The file providing application icon. Relative path starting at the root folder defined above.
+    File: ''
+    Index: 0
+
+Regs:
+  # The directory containing exported registry files.
+  RootFolder: ''
+
+  # Set to 'true', all 'HKCU' and "HKLM" root path will be converted to 'HKMU'.
+  ConvertToHKMU: true
+
+Upgrade:
+  # A lower version package can be installed or not.
+  AllowDowngrades: false
+
+  # The same version package can be installed or not.
+  AllowSameVersionUpgrades: true
+
+# user / machine
+InstallScope:
+  # 'user': install just for current user
+  # 'machine': install for all users of the machine
+  # 'both': user can select the installation mode
+  Mode: 'both'
+  # the default mode if Mode = 'both'
+  DefaultMode: 'user'
+
+# Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
+KillProcess: false
+
+LaunchApplication:
+  # Show a checkbox to launch the application after the installation if enabled.
+  Enable: false
+
+  # The checkbox is checked or not by default.
+  CheckedByDefault: false
