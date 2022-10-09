@@ -285,7 +285,12 @@ else
     $FirstCulture = $CultureLanguage[0]
 }
 
+if (-not $Output.Contains('\'))
+{
+    $Output = ".\" + $Output
+}
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
+echo "MSI package generated at: $Output"
 
 if (-not$PSBoundParameters['Debug'])
 {
