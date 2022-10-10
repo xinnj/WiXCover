@@ -185,6 +185,40 @@ if ($ConfigYaml.Regs.ConvertToHkMU)
     (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
 }
 
+# Generate env group
+if ($ConfigYaml.Envs -and ([Array]($ConfigYaml.Envs).Length -gt 0))
+{
+    $c = @"
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <ComponentGroup Id="EnvGroup">
+"@
+    $c | Out-File "$WorkingDir\EnvGroup.wxs"
+
+    for ($i = 0; $i -lt [Array]($ConfigYaml.Envs).Length; $i++)
+    {
+        $Guid = [guid]::NewGuid().ToString()
+        $c = @"
+      <Component Id="Env-$i" Directory="TARGETDIR" Guid="$Guid" KeyPath="yes">
+        <Environment Id="Env-$i" Name="$ConfigYaml.Envs[$i].Name" Action="$ConfigYaml.Envs[$i].Action"
+        Permanent="$ConfigYaml.Envs[$i].Permanent" System="$ConfigYaml.Envs[$i].System"
+        Part="$ConfigYaml.Envs[$i].Part" Value="$ConfigYaml.Envs[$i].Value" />
+      </Component>
+"@
+        $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append
+    }
+
+    $c = @"
+    </ComponentGroup>
+  </Fragment>
+</Wix>
+"@
+    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append
+
+
+}
+
 # Localiztion
 $CultureLanguage = [ordered]@{ }
 $localizations = (Get-Content $PSScriptRoot\i18n\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
