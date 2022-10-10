@@ -4,7 +4,7 @@
   <Product Name='${ProductName}' Id='*' UpgradeCode='${UpgradeCode}'
     Language='${Language}' Codepage='${Codepage}' Version='${ProductVersion}' Manufacturer='${ManufacturerLoc}'>
 
-    <Package Id='*' Keywords='Installer' Description='${ProductNameLoc} ${LocInstaller}'
+    <Package Id='*' Platform='x64' Keywords='Installer' Description='${ProductNameLoc} ${LocInstaller}'
       Comments='${ProductNameLoc}' Manufacturer='${ManufacturerLoc}'
       InstallerVersion='500' Languages='${Language}' Compressed='yes' SummaryCodepage='${Codepage}' />
 
@@ -15,7 +15,7 @@
     <Property Id='DiskPrompt' Value='${ProductNameLoc} ${LocInstaller} [1]' />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
-      <Directory Id='ProgramFilesFolder' Name='PFiles'>
+      <Directory Id='ProgramFiles64Folder' Name='PFiles'>
           <Directory Id='APPLICATIONFOLDER'>
           </Directory>
       </Directory>

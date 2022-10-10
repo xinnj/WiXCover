@@ -40,7 +40,7 @@ Files:
   RootFolder: 'source'
 
   # The target file that the shortcuts point to. Relative path starting at the root folder defined above.
-  MainExecutable: 'wixc.ps1'
+  MainExecutable: 'quickstart.txt'
 
   Icon:
     # The file providing application icon. Relative path starting at the root folder defined above.
@@ -49,7 +49,7 @@ Files:
 
 Regs:
   # The directory containing exported registry files.
-  RootFolder: ''
+  RootFolder: 'installer\regs'
 
   # Set to 'true', all 'HKCU' and "HKLM" root path will be converted to 'HKMU'.
   ConvertToHKMU: true
@@ -75,7 +75,7 @@ KillProcess: false
 
 LaunchApplication:
   # Show a checkbox to launch the application after the installation if enabled.
-  Enable: false
+  Enable: true
 
   # The checkbox is checked or not by default.
-  CheckedByDefault: false
+  CheckedByDefault: true

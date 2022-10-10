@@ -143,7 +143,7 @@ else
 {
     $VarsList.Add("KillProcess", "<!-- <Custom Action='KillProcess' Before='InstallValidate'/> -->")
 }
-$VarsList.Add("ProcessName", @(Split-Path $VarsList.MainExecutable -leaf))
+$VarsList.Add("ProcessName", (Split-Path $VarsList.MainExecutable -leaf))
 
 # Launch app
 if ($ConfigYaml.LaunchApplication.Enable)
@@ -229,9 +229,12 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     # Substitude all variables in template file
     [string]$Template = Get-Content -Path "$TemplateFile" -Encoding UTF8
-    foreach ($k in $VarsList.Keys)
+    while ($Template.Contains("`${"))
     {
-        $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
+        foreach ($k in $VarsList.Keys)
+        {
+            $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
+        }
     }
 
     # Substitude all guid in template file
@@ -247,7 +250,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     Push-Location
     Set-Location "$WorkingDir"
-    candle $MainFileName FileGroup.wxs RegGroup.wxs
+    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs
     ThrowOnNativeFailure
     Pop-Location
 
