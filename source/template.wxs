@@ -67,6 +67,16 @@
     ${LaunchApplicationText}
     <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
     <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
+
+    <!-- Workaround Wix Bug: https://github.com/wixtoolset/issues/issues/2165 -->
+    <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder" Property="WixPerMachineFolder"
+        Value="[ProgramFiles64Folder][ApplicationFolderName]" Execute="immediate" />
+    <InstallUISequence>
+        <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+    </InstallUISequence>
+    <InstallExecuteSequence>
+        <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+    </InstallExecuteSequence>
     
     <Property Id='WixQuietExecCmdLine' Value='"[WindowsFolder]\System32\taskkill.exe" /F /IM ${ProcessName}'/>
     <CustomAction Id='KillProcess' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
@@ -82,7 +92,7 @@
       
       <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='1' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
       <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='{}' Order='2'>WixAppFolder = "WixPerMachineFolder"</Publish>
-      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = "WixPerMachineFolder"</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='Overwrite_WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = "WixPerMachineFolder"</Publish>
       <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerUserFolder' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
        
       ${LaunchApplication}
