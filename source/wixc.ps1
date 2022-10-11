@@ -170,13 +170,13 @@ else
 }
 
 # Generate file group
-$FileRootfolder = @($ConfigYaml.Files.RootFolder -replace '\\$', '')
+$FileRootfolder = $ConfigYaml.Files.RootFolder -replace '\\$', ''
 heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
 ThrowOnNativeFailure
 
 # Generate reg group
 Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
-$RegRootfolder = @($ConfigYaml.Regs.RootFolder -replace '\\$', '')
+$RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
 Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
 heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
 ThrowOnNativeFailure
@@ -243,15 +243,15 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         }
     }
 
-    foreach ($k in $localizations[@($VarsList.Culture)].Keys)
+    foreach ($k in $localizations[$VarsList.Culture].Keys)
     {
         if ( $VarsList.ContainsKey($k))
         {
-            $VarsList.$k = $localizations[@($VarsList.Culture)].$k
+            $VarsList.$k = $localizations[$VarsList.Culture].$k
         }
         else
         {
-            $VarsList.Add($k, $localizations[@($VarsList.Culture)].$k)
+            $VarsList.Add($k, $localizations[$VarsList.Culture].$k)
         }
     }
 
@@ -263,7 +263,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
             throw "$k is empty!"
         }
         Remove-Variable -Name "$k" -ErrorAction SilentlyContinue
-        New-Variable -Name "$k" -Value @($VarsList.$k)
+        New-Variable -Name "$k" -Value $($VarsList.$k)
     }
 
     $CultureLanguage.Add($VarsList.Culture, $VarsList.Language)
@@ -286,7 +286,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         $Template = $Pattern.replace($Template, "Guid='$Guid'", 1)
     }
 
-    $MainFileName = [string]@($VarsList.Culture) + '.wsx'
+    $MainFileName = $VarsList.Culture + '.wsx'
     Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
     Push-Location
@@ -295,9 +295,9 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     ThrowOnNativeFailure
     Pop-Location
 
-    $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
-    $MsiName = [string]@($VarsList.Culture) + '.msi'
-    $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
+    $ClutersParameter = '-cultures:' + $VarsList.Culture
+    $MsiName = $VarsList.Culture + '.msi'
+    $MainObjName = $VarsList.Culture + '.wixobj'
     light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" `
         "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj" "$WorkingDir\$EnvGroupObjFileName"
     ThrowOnNativeFailure
