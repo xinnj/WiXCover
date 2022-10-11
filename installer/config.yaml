@@ -61,8 +61,8 @@ Envs:
   Action: 'set'
   # yes / no
   Permanent: 'no'
-  # yes / no
-  System: 'yes'
+  # yes / no. Caution: If set to 'yes', but install scope is current user, the installation will fail.
+  System: 'no'
   # all / first / last
   Part: 'first'
   # The value to set into the environment variable

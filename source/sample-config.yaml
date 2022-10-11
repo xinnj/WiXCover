@@ -59,7 +59,7 @@ Envs:
     Action: ''
     # yes / no
     Permanent: ''
-    # yes / no
+    # yes / no. Caution: If set to 'yes', but install scope is current user, the installation will fail.
     System: ''
     # all / first / last
     Part: ''

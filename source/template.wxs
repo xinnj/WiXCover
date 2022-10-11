@@ -48,6 +48,7 @@
       <ComponentRef Id='DesktopMenuDir' />
       <ComponentGroupRef Id='FileGroup' />
       <ComponentGroupRef Id='RegGroup' />
+      ${EnvGroup}
     </Feature>
 
     <Icon Id='${IconId}' SourceFile='${IconFile}' />

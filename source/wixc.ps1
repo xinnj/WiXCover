@@ -186,7 +186,7 @@ if ($ConfigYaml.Regs.ConvertToHkMU)
 }
 
 # Generate env group
-if ($ConfigYaml.Envs -and ([Array]($ConfigYaml.Envs).Length -gt 0))
+if ($ConfigYaml.Envs -and ($ConfigYaml.Envs.Count -gt 0))
 {
     $c = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -194,19 +194,19 @@ if ($ConfigYaml.Envs -and ([Array]($ConfigYaml.Envs).Length -gt 0))
   <Fragment>
     <ComponentGroup Id="EnvGroup">
 "@
-    $c | Out-File "$WorkingDir\EnvGroup.wxs"
+    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Encoding utf8
 
-    for ($i = 0; $i -lt [Array]($ConfigYaml.Envs).Length; $i++)
+    for ($i = 0; $i -lt $ConfigYaml.Envs.Count; $i++)
     {
         $Guid = [guid]::NewGuid().ToString()
         $c = @"
-      <Component Id="Env-$i" Directory="TARGETDIR" Guid="$Guid" KeyPath="yes">
-        <Environment Id="Env-$i" Name="$ConfigYaml.Envs[$i].Name" Action="$ConfigYaml.Envs[$i].Action"
-        Permanent="$ConfigYaml.Envs[$i].Permanent" System="$ConfigYaml.Envs[$i].System"
-        Part="$ConfigYaml.Envs[$i].Part" Value="$ConfigYaml.Envs[$i].Value" />
+      <Component Id="Env_$i" Directory="TARGETDIR" Guid="$Guid" KeyPath="yes">
+        <Environment Id="Env_$i" Name="$($ConfigYaml.Envs[$i].Name)" Action="$($ConfigYaml.Envs[$i].Action)"
+        Permanent="$($ConfigYaml.Envs[$i].Permanent)" System="$($ConfigYaml.Envs[$i].System)"
+        Part="$($ConfigYaml.Envs[$i].Part)" Value="$($ConfigYaml.Envs[$i].Value)" />
       </Component>
 "@
-        $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append
+        $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append -Encoding utf8
     }
 
     $c = @"
@@ -214,9 +214,16 @@ if ($ConfigYaml.Envs -and ([Array]($ConfigYaml.Envs).Length -gt 0))
   </Fragment>
 </Wix>
 "@
-    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append
+    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append -Encoding utf8
 
+    $VarsList.Add("EnvGroup", "<ComponentGroupRef Id='EnvGroup' />")
 
+    $EnvGroupFileName = "EnvGroup.wxs"
+    $EnvGroupObjFileName += "EnvGroup.wixobj"
+}
+else
+{
+    $VarsList.Add("EnvGroup", "<!-- <ComponentGroupRef Id='EnvGroup' /> -->")
 }
 
 # Localiztion
@@ -284,14 +291,15 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     Push-Location
     Set-Location "$WorkingDir"
-    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs
+    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs $EnvGroupFileName
     ThrowOnNativeFailure
     Pop-Location
 
     $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
     $MsiName = [string]@($VarsList.Culture) + '.msi'
     $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj"
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" `
+        "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj" "$WorkingDir\$EnvGroupObjFileName"
     ThrowOnNativeFailure
 }
 
