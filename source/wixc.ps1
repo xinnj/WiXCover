@@ -185,6 +185,47 @@ if ($ConfigYaml.Regs.ConvertToHkMU)
     (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
 }
 
+# Generate env group
+if ($ConfigYaml.Envs -and ($ConfigYaml.Envs.Count -gt 0))
+{
+    $c = @"
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <ComponentGroup Id="EnvGroup">
+"@
+    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Encoding utf8
+
+    for ($i = 0; $i -lt $ConfigYaml.Envs.Count; $i++)
+    {
+        $Guid = [guid]::NewGuid().ToString()
+        $c = @"
+      <Component Id="Env_$i" Directory="TARGETDIR" Guid="$Guid" KeyPath="yes">
+        <Environment Id="Env_$i" Name="$($ConfigYaml.Envs[$i].Name)" Action="$($ConfigYaml.Envs[$i].Action)"
+        Permanent="$($ConfigYaml.Envs[$i].Permanent)" System="$($ConfigYaml.Envs[$i].System)"
+        Part="$($ConfigYaml.Envs[$i].Part)" Value="$($ConfigYaml.Envs[$i].Value)" />
+      </Component>
+"@
+        $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append -Encoding utf8
+    }
+
+    $c = @"
+    </ComponentGroup>
+  </Fragment>
+</Wix>
+"@
+    $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append -Encoding utf8
+
+    $VarsList.Add("EnvGroup", "<ComponentGroupRef Id='EnvGroup' />")
+
+    $EnvGroupFileName = "EnvGroup.wxs"
+    $EnvGroupObjFileName += "EnvGroup.wixobj"
+}
+else
+{
+    $VarsList.Add("EnvGroup", "<!-- <ComponentGroupRef Id='EnvGroup' /> -->")
+}
+
 # Localiztion
 $CultureLanguage = [ordered]@{ }
 $localizations = (Get-Content $PSScriptRoot\i18n\localizations.yaml -Encoding UTF8 | ConvertFrom-Yaml)
@@ -250,14 +291,15 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     Push-Location
     Set-Location "$WorkingDir"
-    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs
+    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs $EnvGroupFileName
     ThrowOnNativeFailure
     Pop-Location
 
     $ClutersParameter = '-cultures:' + [string]@($VarsList.Culture)
     $MsiName = [string]@($VarsList.Culture) + '.msi'
     $MainObjName = [string]@($VarsList.Culture) + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj"
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" `
+        "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj" "$WorkingDir\$EnvGroupObjFileName"
     ThrowOnNativeFailure
 }
 
