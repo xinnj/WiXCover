@@ -46,8 +46,8 @@
     <Feature Id='Complete' Level='1' Title='${ProductNameLoc}' Description='The complete package.'>
       <ComponentRef Id='ProgramMenuDir' />
       <ComponentRef Id='DesktopMenuDir' />
-      <ComponentGroupRef Id='FileGroup' />
-      <ComponentGroupRef Id='RegGroup' />
+      ${FileGroup}
+      ${RegGroup}
       ${EnvGroup}
     </Feature>
 

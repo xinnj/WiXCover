@@ -172,15 +172,20 @@ else
 # Generate file group
 if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 {
-    $FileRootfolder = $ConfigYaml.Files.RootFolder -replace '\\$', ''
+    $FileRootfolder = Resolve-Path -LiteralPath "$($ConfigYaml.Files.RootFolder)"
+    $FileRootfolder = $FileRootfolder -replace '\\$', ''
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
     ThrowOnNativeFailure
+
+    $VarsList.Add("FileGroup", "<ComponentGroupRef Id='FileGroup' />")
 
     $FileGroupFileName = "FileGroup.wxs"
     $FileGroupObjFileName = "FileGroup.wixobj"
 }
 else
 {
+    $VarsList.Add("FileGroup", "<!-- <ComponentGroupRef Id='FileGroup' /> -->")
+    $FileRootfolder= "."
     $FileGroupFileName = ""
     $FileGroupObjFileName = ""
 }
@@ -198,11 +203,14 @@ if ($ConfigYaml.Regs.RootFolder -and ($ConfigYaml.Regs.RootFolder -ne ''))
         (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
     }
 
+    $VarsList.Add("RegGroup", "<ComponentGroupRef Id='RegGroup' />")
+
     $RegGroupFileName = "RegGroup.wxs"
     $RegGroupObjFileName = "RegGroup.wixobj"
 }
 else
 {
+    $VarsList.Add("RegGroup", "<!-- <ComponentGroupRef Id='RegGroup' /> -->")
     $RegGroupFileName = ""
     $RegGroupObjFileName = ""
 }
@@ -317,14 +325,14 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Set-Location "$WorkingDir"
     candle -arch x64 $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName
     ThrowOnNativeFailure
-    Pop-Location
 
     $ClutersParameter = '-cultures:' + $VarsList.Culture
     $MsiName = $VarsList.Culture + '.msi'
     $MainObjName = $VarsList.Culture + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" `
-        "$WorkingDir\$MainObjName" "$WorkingDir\$FileGroupObjFileName" "$WorkingDir\$RegGroupObjFileName" "$WorkingDir\$EnvGroupObjFileName"
+    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o $MsiName `
+        $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName
     ThrowOnNativeFailure
+    Pop-Location
 }
 
 $FirstCulture = ""
