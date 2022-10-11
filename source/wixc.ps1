@@ -170,19 +170,41 @@ else
 }
 
 # Generate file group
-$FileRootfolder = $ConfigYaml.Files.RootFolder -replace '\\$', ''
-heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
-ThrowOnNativeFailure
+if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
+{
+    $FileRootfolder = $ConfigYaml.Files.RootFolder -replace '\\$', ''
+    heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
+    ThrowOnNativeFailure
+
+    $FileGroupFileName = "FileGroup.wxs"
+    $FileGroupObjFileName = "FileGroup.wixobj"
+}
+else
+{
+    $FileGroupFileName = ""
+    $FileGroupObjFileName = ""
+}
 
 # Generate reg group
-Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
-$RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
-Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
-heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
-ThrowOnNativeFailure
-if ($ConfigYaml.Regs.ConvertToHkMU)
+if ($ConfigYaml.Regs.RootFolder -and ($ConfigYaml.Regs.RootFolder -ne ''))
 {
-    (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
+    Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
+    $RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
+    Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
+    heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
+    ThrowOnNativeFailure
+    if ($ConfigYaml.Regs.ConvertToHkMU)
+    {
+        (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
+    }
+
+    $RegGroupFileName = "RegGroup.wxs"
+    $RegGroupObjFileName = "RegGroup.wixobj"
+}
+else
+{
+    $RegGroupFileName = ""
+    $RegGroupObjFileName = ""
 }
 
 # Generate env group
@@ -219,11 +241,13 @@ if ($ConfigYaml.Envs -and ($ConfigYaml.Envs.Count -gt 0))
     $VarsList.Add("EnvGroup", "<ComponentGroupRef Id='EnvGroup' />")
 
     $EnvGroupFileName = "EnvGroup.wxs"
-    $EnvGroupObjFileName += "EnvGroup.wixobj"
+    $EnvGroupObjFileName = "EnvGroup.wixobj"
 }
 else
 {
     $VarsList.Add("EnvGroup", "<!-- <ComponentGroupRef Id='EnvGroup' /> -->")
+    $EnvGroupFileName = ""
+    $EnvGroupObjFileName = ""
 }
 
 # Localiztion
@@ -291,7 +315,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     Push-Location
     Set-Location "$WorkingDir"
-    candle -arch x64 $MainFileName FileGroup.wxs RegGroup.wxs $EnvGroupFileName
+    candle -arch x64 $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName
     ThrowOnNativeFailure
     Pop-Location
 
@@ -299,7 +323,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     $MsiName = $VarsList.Culture + '.msi'
     $MainObjName = $VarsList.Culture + '.wixobj'
     light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o "$WorkingDir\$MsiName" `
-        "$WorkingDir\$MainObjName" "$WorkingDir\FileGroup.wixobj" "$WorkingDir\RegGroup.wixobj" "$WorkingDir\$EnvGroupObjFileName"
+        "$WorkingDir\$MainObjName" "$WorkingDir\$FileGroupObjFileName" "$WorkingDir\$RegGroupObjFileName" "$WorkingDir\$EnvGroupObjFileName"
     ThrowOnNativeFailure
 }
 
