@@ -2,7 +2,7 @@ Product:
   # Will be part of installation path, English only is preferred.
   Name: ''
 
-  # will be used to control upgrade process
+  # Will be used to control upgrade process, SemVer is recommended.
   Version: ''
 
 # A GUID code. Should be kept unchanged for various versions of same product, but different with other products.
@@ -80,7 +80,7 @@ InstallScope:
   # 'both': user can select the installation mode
   Mode: ''
   # the default mode if Mode = 'both'
-  DefaultMode: 'machine'
+  DefaultMode: ''
 
 # Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
 KillProcess: false

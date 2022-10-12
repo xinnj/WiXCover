@@ -2,7 +2,7 @@ Product:
   # Will be part of installation path, English only is preferred.
   Name: 'WiXCover'
 
-  # will be used to control upgrade process
+  # Will be used to control upgrade process, SemVer is recommended.
   Version: '1.0.0'
 
 # A GUID code. Should be kept unchanged for various versions of same product, but different with other products.
