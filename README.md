@@ -1,6 +1,6 @@
 # WiXCover
 
-A guidline in Chinese can be found [here](https://juejin.cn/post/7158712946065932295).
+*A guidline in Chinese can be found [here](https://juejin.cn/post/7158712946065932295).*
 
 WiX Cover is a tool to create Windows installer package (MSI package), based on [WiX toolset](https://wixtoolset.org/) technologies.
 
