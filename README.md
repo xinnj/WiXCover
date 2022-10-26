@@ -1,5 +1,7 @@
 # WiXCover
 
+A guidline in Chinese can be found [here](https://juejin.cn/post/7158712946065932295).
+
 WiX Cover is a tool to create Windows installer package (MSI package), based on [WiX toolset](https://wixtoolset.org/) technologies.
 
 WiX toolset is powerful but the learning curve is not so slight. For many Windows developers, an easy-to-use tool with limited functions maybe a better choice.
