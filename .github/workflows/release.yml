@@ -12,11 +12,11 @@ jobs:
         uses: actions/checkout@v3
       - name: Build
         shell: powershell
-        run: installer\build.ps1 -Version ${{ github.ref_name }}
+        run: installer/build.ps1 -Version ${{ github.ref_name }}
       - name: Test
         shell: powershell
-        run: ls -l .\build\
+        run: ls -l ./build/
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: .\build\WiXCover-${{ github.ref_name }}.msi
+          files: ./build/WiXCover-${{ github.ref_name }}.msi
