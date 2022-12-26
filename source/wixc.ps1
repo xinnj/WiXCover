@@ -360,7 +360,7 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
 }
 else
 {
-    $FirstCulture = $CultureLanguage[0]
+    $FirstCulture = $CultureLanguage.Keys[0]
 }
 
 if (-not $Output.Contains('\'))
