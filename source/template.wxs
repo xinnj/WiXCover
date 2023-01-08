@@ -9,7 +9,7 @@
       InstallerVersion='500' Languages='${Language}' Compressed='yes' SummaryCodepage='${Codepage}' />
 
     <MajorUpgrade AllowDowngrades='${AllowDowngrades}' AllowSameVersionUpgrades='${AllowSameVersionUpgrades}' Schedule='afterInstallValidate'
-      DowngradeErrorMessage='A later version of ${ProductNameLoc} is already installed.' />
+      DowngradeErrorMessage='${LocDowngradeErrorMessage}' />
       
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' CompressionLevel='high' />
     <Property Id='DiskPrompt' Value='${ProductNameLoc} ${LocInstaller} [1]' />
@@ -49,6 +49,7 @@
       ${FileGroup}
       ${RegGroup}
       ${EnvGroup}
+      ${ExtraGroups}
     </Feature>
 
     <Icon Id='${IconId}' SourceFile='${IconFile}' />

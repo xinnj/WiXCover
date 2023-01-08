@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <ComponentGroup Id='ExtraGroup'>
+            <Component Id='CleanRegistryEntries' Directory='TARGETDIR' Guid='' KeyPath='yes'>
+                <RemoveRegistryKey Action='removeOnInstall' Root='HKCU' Key='Software\test\test-product'/>
+                <RemoveRegistryKey Action='removeOnInstall' Root='HKLM' Key='Software\test\test-product'/>
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+</Wix>

@@ -30,13 +30,6 @@ param (
 
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
-function ThrowOnNativeFailure
-{
-    if (-not$?)
-    {
-        throw 'Native Failure'
-    }
-}
 
 function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
 {
@@ -150,7 +143,7 @@ if ($ConfigYaml.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
 
-    $VarsList.Add("LaunchApplicationText", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch `${ProductNameLoc}' />")
+    $VarsList.Add("LaunchApplicationText", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} `${ProductNameLoc}' />")
 
     if ($ConfigYaml.LaunchApplication.CheckedByDefault)
     {
@@ -165,7 +158,7 @@ else
 {
     $VarsList.Add("LaunchApplication", "<!-- <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish> -->")
     $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
-    $VarsList.Add("LaunchApplicationText", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch `${ProductNameLoc}' /> -->")
+    $VarsList.Add("LaunchApplicationText", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} `${ProductNameLoc}' /> -->")
 
 }
 
@@ -175,7 +168,10 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
     $FileRootfolder = Resolve-Path -LiteralPath "$($ConfigYaml.Files.RootFolder)"
     $FileRootfolder = $FileRootfolder -replace '\\$', ''
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
-    ThrowOnNativeFailure
+    if (-not$?)
+    {
+        throw 'Native Failure'
+    }
 
     $VarsList.Add("FileGroup", "<ComponentGroupRef Id='FileGroup' />")
 
@@ -197,7 +193,11 @@ if ($ConfigYaml.Regs.RootFolder -and ($ConfigYaml.Regs.RootFolder -ne ''))
     $RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
     Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
     heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
-    ThrowOnNativeFailure
+    if (-not$?)
+    {
+        throw 'Native Failure'
+    }
+
     if ($ConfigYaml.Regs.ConvertToHkMU)
     {
         (Get-Content "$WorkingDir\RegGroup.wxs").replace('Root="HKCU"', 'Root="HKMU"').replace('Root="HKLM"', 'Root="HKMU"').replace('SOFTWARE\WOW6432Node\', 'SOFTWARE\') | Out-File "$WorkingDir\RegGroup.wxs" -Encoding utf8
@@ -256,6 +256,35 @@ else
     $VarsList.Add("EnvGroup", "<!-- <ComponentGroupRef Id='EnvGroup' /> -->")
     $EnvGroupFileName = ""
     $EnvGroupObjFileName = ""
+}
+
+# Generate extra groups
+if ($ConfigYaml.ExtraSourceFiles)
+{
+    $ExtraGroups = ""
+    $ExtraGroupFileNames = ""
+    $ExtraGroupObjFileNames = ""
+    foreach ($OneExtraFile in $ConfigYaml.ExtraSourceFiles)
+    {
+        [string]$ExtraFileContent = Get-Content -Path "$OneExtraFile" -Encoding UTF8
+        if ($ExtraFileContent -match "<ComponentGroup Id=[`"'](.+?)[`"']>")
+        {
+            $ComponentGroupId = $matches[1]
+        }
+        else
+        {
+            throw "File $OneExtraFile doesn't have ComponentGroup!"
+        }
+
+        $ExtraGroups = $ExtraGroups + "<ComponentGroupRef Id='$ComponentGroupId'/>`n"
+        $ExtraGroupFileNames = $ExtraGroupFileNames + "'" + $OneExtraFile + "' "
+        $ExtraGroupObjFileNames = $ExtraGroupObjFileNames + "'" + [System.IO.Path]::GetFileNameWithoutExtension($OneExtraFile) + ".wixobj' "
+    }
+    $VarsList.Add("ExtraGroups", $ExtraGroups)
+}
+else
+{
+    $VarsList.Add("ExtraGroups", "<!-- No extra groups -->")
 }
 
 # Localiztion
@@ -321,17 +350,47 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     $MainFileName = $VarsList.Culture + '.wsx'
     Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
+    foreach ($OneExtraFile in $ConfigYaml.ExtraSourceFiles)
+    {
+        # Substitude all variables in extra group file
+        [string]$Extra = Get-Content -Path "$OneExtraFile" -Encoding UTF8
+        while ($Extra.Contains("`${"))
+        {
+            foreach ($k in $VarsList.Keys)
+            {
+                $Extra = $Extra.Replace("`$`{$k`}", $VarsList.$k)
+            }
+        }
+
+        # Substitude all guid in extra group file
+        $Count = ([regex]::Matches($Extra, "Guid=''")).count
+        for($i = 1; $i -le $Count; $i++) {
+            $Guid = [guid]::NewGuid().ToString()
+            [regex]$Pattern = "Guid=''"
+            $Extra = $Pattern.replace($Extra, "Guid='$Guid'", 1)
+        }
+
+        Out-File -InputObject $Extra -FilePath "$WorkingDir\$OneExtraFile" -Encoding utf8 -Force
+    }
+
     Push-Location
     Set-Location "$WorkingDir"
-    candle -arch x64 $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName
-    ThrowOnNativeFailure
+    $Command = "candle -arch x64 $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraGroupFileNames"
+    Invoke-Expression $Command
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw 'Invoke-Expression Failure'
+    }
 
     $ClutersParameter = '-cultures:' + $VarsList.Culture
     $MsiName = $VarsList.Culture + '.msi'
     $MainObjName = $VarsList.Culture + '.wixobj'
-    light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b "$FileRootfolder" -o $MsiName `
-        $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName
-    ThrowOnNativeFailure
+    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraGroupObjFileNames"
+    Invoke-Expression $Command
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw 'Invoke-Expression Failure'
+    }
     Pop-Location
 }
 
@@ -348,15 +407,24 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
         {
             $CurrentCulture = $k
             torch -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
-            ThrowOnNativeFailure
+            if (-not$?)
+            {
+                throw 'Native Failure'
+            }
             cscript $PSScriptRoot\i18n\WiSubStg.vbs "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.mst" $CultureLanguage.$k
-            ThrowOnNativeFailure
+            if (-not$?)
+            {
+                throw 'Native Failure'
+            }
         }
     }
 
     $Languages = [Array]$CultureLanguage.Values -join ','
     cscript $PSScriptRoot\i18n\WiLangId.vbs "$WorkingDir\${FirstCulture}`.msi" Package $Languages
-    ThrowOnNativeFailure
+    if (-not$?)
+    {
+        throw 'Native Failure'
+    }
 }
 else
 {
@@ -368,7 +436,7 @@ if (-not $Output.Contains('\'))
     $Output = ".\" + $Output
 }
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
-echo "MSI package generated at: $Output"
+Write-Output "MSI package generated at: $Output"
 
 if (-not$PSBoundParameters['Debug'])
 {

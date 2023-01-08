@@ -68,6 +68,12 @@ Envs:
   # The value to set into the environment variable
   Value: '[APPLICATIONFOLDER]'
 
+# Specify wix source files (.wxs) to be complied directly. Two examples can be found here:
+# https://github.com/xinnj/WiXCover/blob/main/source/sample-extras1.wxs
+# https://github.com/xinnj/WiXCover/blob/main/source/sample-extras2.wxs
+# All variables in source files will be substituted by real values. All empty guid like "Guid=''", will be substituted by real guid value.
+ExtraSourceFiles: []
+
 Upgrade:
   # A lower version package can be installed or not.
   AllowDowngrades: false
