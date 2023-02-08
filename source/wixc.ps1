@@ -347,6 +347,15 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         $Template = $Pattern.replace($Template, "Guid='$Guid'", 1)
     }
 
+    # Remove AllowSameVersionUpgrades & DowngradeErrorMessage if AllowDowngrades
+    if ($ConfigYaml.Upgrade.AllowDowngrades) {
+        [regex]$Pattern = "AllowSameVersionUpgrades=['`"].*?['`"]"
+        $Template = $Pattern.replace($Template, "", 1)
+
+        [regex]$Pattern = "DowngradeErrorMessage=['`"].*?['`"]"
+        $Template = $Pattern.replace($Template, "", 1)
+    }
+
     $MainFileName = $VarsList.Culture + '.wsx'
     Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
