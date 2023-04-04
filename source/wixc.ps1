@@ -8,16 +8,16 @@
     Build MSI package based on yaml config.
 
 .PARAMETER Config
-    The yaml config file.
+    The yaml config file. (required)
 
 .PARAMETER Output
-    The output MSI package file.
+    The output MSI package file. (required)
 
 .PARAMETER TemplateFile
-    The template file used by WiX as source file. Will use the default one if not provided.
+    The template file used by WiX as source file. Will use the default one if not provided. (optional)
 
 .PARAMETER WorkingDir
-    The directory to store the temporary files.
+    The directory to store the temporary files. (optional)
 #>
 
     [CmdletBinding()]

@@ -1,7 +1,10 @@
 1. Create your own config file based on the sample file "sample-config.yaml" in the installation folder,
    or download from: https://github.com/xinnj/WiXCover/blob/main/source/sample-config.yaml.
 
-2. Open a PowerShell window and get the help information by command:
+2. Execute the command to generate MSI package:
+   "wixc.ps1 -config some-path\my-config.yaml -output some-path\my-installer.msi"
+
+3. Open a PowerShell window and get the help information by command:
    "get-help wixc.ps1 -Detailed"
 
-3. Refer to https://github.com/xinnj/WiXCover for more information.
+4. Refer to https://github.com/xinnj/WiXCover for more information.

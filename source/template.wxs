@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  
+
   <Product Name='${ProductNameLoc}' Id='*' UpgradeCode='${UpgradeCode}'
     Language='${Language}' Codepage='${Codepage}' Version='${ProductVersion}' Manufacturer='${ManufacturerLoc}'>
 
@@ -10,7 +10,7 @@
 
     <MajorUpgrade AllowDowngrades='${AllowDowngrades}' AllowSameVersionUpgrades='${AllowSameVersionUpgrades}' Schedule='afterInstallValidate'
       DowngradeErrorMessage='${LocDowngradeErrorMessage}' />
-      
+
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' CompressionLevel='high' />
     <Property Id='DiskPrompt' Value='${ProductNameLoc} ${LocInstaller} [1]' />
 
@@ -25,6 +25,8 @@
           <Component Id='ProgramMenuDir' Guid=''>
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
             <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Type='string' Value='' KeyPath='yes' />
+            <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Name='InstallScope' Type='string' Value='[FinalInstallScope]' KeyPath='no' />
+            <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Name='InstallDir' Type='string' Value='[APPLICATIONFOLDER]' KeyPath='no' />
             <Shortcut Id='startmenushortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
               Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
             <Shortcut Id='UninstallProduct' Name='${LocUninstall} ${ProductNameLoc}' Description='${LocUninstall} ${ProductNameLoc}'
@@ -55,48 +57,115 @@
     <Icon Id='${IconId}' SourceFile='${IconFile}' />
 
     <Property Id='ARPPRODUCTICON' Value='${IconId}' />
-    
+
     <Property Id='ApplicationFolderName' Value='${Manufacturer}\${ProductName}' />
     <Property Id='WixAppFolder' Value='${WixAppFolder}' />
     <Property Id='ALLUSERS' Value='${ALLUSERS}' />
     <Property Id='Privileged' Value='${Privileged}' />
     <Property Id='MSIINSTALLPERUSER' Value='${MSIINSTALLPERUSER}' />
-    
+
     <WixVariable Id='WixUISupportPerUser' Value='${WixUISupportPerUser}' />
     <WixVariable Id='WixUISupportPerMachine' Value='${WixUISupportPerMachine}' />
+
+    <!-- check installation scope of previous version -->
+    <Property Id="UPGRADESCOPE">
+      <RegistrySearch Id="UpgradeScope"
+        Root="HKCU"
+        Key="Software\${Manufacturer}\${ProductName}"
+        Name="InstallScope"
+        Type="raw"/>
+    </Property>
+    <Property Id="UPGRADEDIR">
+      <RegistrySearch Id="UpgradeDir"
+        Root="HKCU"
+        Key="Software\${Manufacturer}\${ProductName}"
+        Name="InstallDir"
+        Type="raw"/>
+    </Property>
+
+    <!-- Installation scope of previous version is "perMachine" -->
+    <SetProperty Action="SetDefaultInstallScopeMachine0" Id="WixAppFolder" After="AppSearch" Value="WixPerMachineFolder">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeMachine1" Id="ALLUSERS" After="AppSearch" Value="1">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeMachine2" Id="Privileged" After="AppSearch" Value="1">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeMachine3" Id="MSIINSTALLPERUSER" After="AppSearch" Value="">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeMachine5" Id="WixPerMachineFolder" After="AppSearch" Value="[UPGRADEDIR]">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeMachine6" Id="APPLICATIONFOLDER" After="AppSearch" Value="[UPGRADEDIR]">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
+    </SetProperty>
+
+    <!-- Installation scope of previous version is "perUser" -->
+    <SetProperty Action="SetDefaultInstallScopeUser0" Id="WixAppFolder" After="AppSearch" Value="WixPerUserFolder">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeUser1" Id="ALLUSERS" After="AppSearch" Value="">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeUser2" Id="Privileged" After="AppSearch" Value="0">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeUser3" Id="MSIINSTALLPERUSER" After="AppSearch" Value="1">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
+    </SetProperty>
+    <SetProperty Action="SetDefaultInstallScopeUser4" Id="WixPerUserFolder" After="AppSearch" Value="[UPGRADEDIR]">
+      <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
+    </SetProperty>
+
+    <!-- Get the final WixAppFolder value selected -->
+    <SetProperty Action="SetFinalInstallScope0" Id="FinalInstallScope" Before="InstallValidate" Value="user" Sequence="execute">
+      <![CDATA[NOT Installed AND NOT ALLUSERS]]>
+    </SetProperty>
+    <SetProperty Action="SetFinalInstallScope1" Id="FinalInstallScope" Before="InstallValidate" Value="machine" Sequence="execute">
+      <![CDATA[NOT Installed AND (ALLUSERS = "1")]]>
+    </SetProperty>
 
     ${LaunchApplicationChecked}
     ${LaunchApplicationText}
     <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
     <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
 
-    <!-- Workaround Wix Bug: https://github.com/wixtoolset/issues/issues/2165 -->
     <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder" Property="WixPerMachineFolder"
-        Value="[ProgramFiles64Folder][ApplicationFolderName]" Execute="immediate" />
+      Value="[ProgramFiles64Folder][ApplicationFolderName]" Execute="immediate" />
+    <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder2" Property="WixPerMachineFolder"
+      Value="[UPGRADEDIR]" Execute="immediate" />
     <InstallUISequence>
-        <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+      <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+      <Custom Action="Overwrite_WixSetDefaultPerMachineFolder2" After="Overwrite_WixSetDefaultPerMachineFolder">(WixAppFolder = "WixPerMachineFolder") AND UPGRADESCOPE AND UPGRADEDIR</Custom>
+      <FindRelatedProducts Before="CostInitialize" />
     </InstallUISequence>
     <InstallExecuteSequence>
-        <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+      <Custom Action="Overwrite_WixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+      <Custom Action="Overwrite_WixSetDefaultPerMachineFolder2" After="Overwrite_WixSetDefaultPerMachineFolder">(WixAppFolder = "WixPerMachineFolder") AND UPGRADESCOPE AND UPGRADEDIR</Custom>
+      <FindRelatedProducts Before="CostInitialize" />
     </InstallExecuteSequence>
-    
+
     <Property Id='WixQuietExecCmdLine' Value='"[WindowsFolder]\System32\taskkill.exe" /F /IM ${ProcessName}'/>
     <CustomAction Id='KillProcess' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
     <InstallExecuteSequence>
       ${KillProcess}
     </InstallExecuteSequence>
-    
+
     <WixVariable Id='WixUILicenseRtf' Value='${LicenseFile}' />
-    
+
     <UI>
       <UIRef Id='WixUI_Advanced' />
       <UIRef Id='WixUI_ErrorProgressText' />
-      
+
       <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='1' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
       <Publish Dialog='InstallScopeDlg' Control='Next' Property='MSIINSTALLPERUSER' Value='{}' Order='2'>WixAppFolder = "WixPerMachineFolder"</Publish>
       <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='Overwrite_WixSetDefaultPerMachineFolder' Order='3'>WixAppFolder = "WixPerMachineFolder"</Publish>
+      <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='Overwrite_WixSetDefaultPerMachineFolder2' Order='3'>(WixAppFolder = "WixPerMachineFolder") AND UPGRADESCOPE AND UPGRADEDIR</Publish>
       <Publish Dialog='InstallScopeDlg' Control='Next' Event='DoAction' Value='WixSetDefaultPerUserFolder' Order='3'>WixAppFolder = "WixPerUserFolder"</Publish>
-       
+
       ${LaunchApplication}
     </UI>
   </Product>
