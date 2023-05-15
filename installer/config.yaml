@@ -1,4 +1,7 @@
-﻿Product:
+﻿#  architecture defaults for package,  x86 or x64.
+arch: 'x64'
+
+Product:
   # Will be part of installation path, English only is preferred.
   Name: 'WiXCover'
 

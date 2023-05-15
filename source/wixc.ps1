@@ -63,6 +63,25 @@ $VarsList.Add("IconIndex",$ConfigYaml.Files.Icon.Index.ToString())
 $IconExt = $ConfigYaml.Files.Icon.File.split('.')[-1]
 $VarsList.Add("IconId", "icon." + $IconExt)
 
+# check arch
+if ($ConfigYaml.arch -eq 'x86')
+{
+    $VarsList.Add("ProgramFilesFolder", "ProgramFilesFolder")
+    $VarsList.Add("SystemFolder", "SystemFolder")
+}
+else
+{
+    if ($ConfigYaml.arch -eq 'x64')
+    {
+        $VarsList.Add("ProgramFilesFolder", "ProgramFiles64Folder")
+        $VarsList.Add("SystemFolder", "System64Folder")
+    }
+    else
+    {
+        throw "arch '$ConfigYaml.arch' is invalid!"
+    }
+}
+
 # Upgrade method
 if ($ConfigYaml.Upgrade.AllowDowngrades)
 {
@@ -384,7 +403,9 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     Push-Location
     Set-Location "$WorkingDir"
-    $Command = "candle -arch x64 $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraGroupFileNames"
+    $arch = $ConfigYaml.arch
+    $Command = "candle -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraGroupFileNames"
+    echo $Command
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {

@@ -18,6 +18,7 @@ V1.2.0 - During upgrade, set default installation scope (per user or per machine
 - Dual-mode installation scope supported
   - Per user: the application installed is only available for current user
   - Per machine: the application installed is only available for all the users on the machine
+- Auto detect install options (scope & install path) of previous installation, and set as the new installation's default options
 - Configurable option to launch application when installation finished
 - Configurable option to kill the running process from previous version during installation
 - Multi-language in one installer

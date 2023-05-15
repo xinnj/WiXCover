@@ -4,7 +4,7 @@
   <Product Name='${ProductNameLoc}' Id='*' UpgradeCode='${UpgradeCode}'
     Language='${Language}' Codepage='${Codepage}' Version='${ProductVersion}' Manufacturer='${ManufacturerLoc}'>
 
-    <Package Id='*' Platform='x64' Keywords='Installer' Description='${ProductNameLoc} ${LocInstaller}'
+    <Package Id='*' Keywords='Installer' Description='${ProductNameLoc} ${LocInstaller}'
       Comments='${ProductNameLoc}' Manufacturer='${ManufacturerLoc}'
       InstallerVersion='500' Languages='${Language}' Compressed='yes' SummaryCodepage='${Codepage}' />
 
@@ -15,7 +15,7 @@
     <Property Id='DiskPrompt' Value='${ProductNameLoc} ${LocInstaller} [1]' />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
-      <Directory Id='ProgramFiles64Folder' Name='PFiles'>
+      <Directory Id='${ProgramFilesFolder}' Name='PFiles'>
           <Directory Id='APPLICATIONFOLDER'>
           </Directory>
       </Directory>
@@ -30,7 +30,7 @@
             <Shortcut Id='startmenushortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
               Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
             <Shortcut Id='UninstallProduct' Name='${LocUninstall} ${ProductNameLoc}' Description='${LocUninstall} ${ProductNameLoc}'
-              Target='[System64Folder]msiexec.exe' Arguments='/x [ProductCode]'/>
+              Target='[${SystemFolder}]msiexec.exe' Arguments='/x [ProductCode]'/>
           </Component>
         </Directory>
       </Directory>
@@ -134,7 +134,7 @@
     <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
 
     <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder" Property="WixPerMachineFolder"
-      Value="[ProgramFiles64Folder][ApplicationFolderName]" Execute="immediate" />
+      Value="[${ProgramFilesFolder}][ApplicationFolderName]" Execute="immediate" />
     <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder2" Property="WixPerMachineFolder"
       Value="[UPGRADEDIR]" Execute="immediate" />
     <InstallUISequence>

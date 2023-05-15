@@ -1,3 +1,6 @@
+#  architecture defaults for package,  x86 or x64.
+arch: ''
+
 Product:
   # Will be part of installation path, English only is preferred.
   Name: ''
