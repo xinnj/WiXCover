@@ -28,12 +28,13 @@ param (
     [string]$WorkingDir = $( Join-Path $env:TEMP "~wixc" )
 )
 
+Set-PSDebug -Trace 0
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 
 function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
 {
-    if ( $MyList.ContainsKey($MyKey))
+    if ($MyList.ContainsKey($MyKey))
     {
         $MyList[$MyKey] = $MyValue
     }
@@ -186,6 +187,20 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 {
     $FileRootfolder = Resolve-Path -LiteralPath "$($ConfigYaml.Files.RootFolder)"
     $FileRootfolder = $FileRootfolder -replace '\\$', ''
+
+    # Sign code
+    if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $ConfigYaml.CodeSign.fileFilters)
+    {
+        echo "Start to sign code..."
+        $files = @()
+        foreach ($OneFilter in $ConfigYaml.CodeSign.fileFilters)
+        {
+            $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | %{$_.FullName}
+        }
+
+        & "$PSScriptRoot/Sign-Files.ps1" -Files $files -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword
+    }
+
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
     if (-not$?)
     {
@@ -468,6 +483,13 @@ if (-not $Output.Contains('\'))
 {
     $Output = ".\" + $Output
 }
+
+if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $ConfigYaml.CodeSign.fileFilters)
+{
+    echo "Sign msi file..."
+    & "$PSScriptRoot/Sign-Files.ps1" -Files "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword
+}
+
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
 Write-Output "MSI package generated at: $Output"
 

@@ -100,3 +100,13 @@ LaunchApplication:
 
   # The checkbox is checked or not by default.
   CheckedByDefault: true
+
+CodeSign:
+  # pfx file path
+  CertFile: ''
+  # Password of the pfx file
+  CertPassword: ''
+  # Which files in "Files.RootFolder" will be signed
+  fileFilters:
+    - '*.exe'
+    - '*.dll'
