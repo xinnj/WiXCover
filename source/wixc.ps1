@@ -283,21 +283,23 @@ if ($ConfigYaml.ExtraSourceFiles)
     $ExtraGroups = ""
     $ExtraGroupFileNames = ""
     $ExtraGroupObjFileNames = ""
-    foreach ($OneExtraFile in $ConfigYaml.ExtraSourceFiles)
+    foreach ($OneExtraFilePath in $ConfigYaml.ExtraSourceFiles)
     {
-        [string]$ExtraFileContent = Get-Content -Path "$OneExtraFile" -Encoding UTF8
+        [string]$ExtraFileContent = Get-Content -Path "$OneExtraFilePath" -Encoding UTF8
         if ($ExtraFileContent -match "<ComponentGroup Id=[`"'](.+?)[`"']>")
         {
             $ComponentGroupId = $matches[1]
         }
         else
         {
-            throw "File $OneExtraFile doesn't have ComponentGroup!"
+            throw "File $OneExtraFilePath doesn't have ComponentGroup!"
         }
 
         $ExtraGroups = $ExtraGroups + "<ComponentGroupRef Id='$ComponentGroupId'/>`n"
-        $ExtraGroupFileNames = $ExtraGroupFileNames + "'" + $OneExtraFile + "' "
-        $ExtraGroupObjFileNames = $ExtraGroupObjFileNames + "'" + [System.IO.Path]::GetFileNameWithoutExtension($OneExtraFile) + ".wixobj' "
+
+        $OneExtraFileName = [System.IO.Path]::GetFileName($OneExtraFilePath)
+        $ExtraGroupFileNames = $ExtraGroupFileNames + "'" + $OneExtraFileName + "' "
+        $ExtraGroupObjFileNames = $ExtraGroupObjFileNames + "'" + [System.IO.Path]::GetFileNameWithoutExtension($OneExtraFileName) + ".wixobj' "
     }
     $VarsList.Add("ExtraGroups", $ExtraGroups)
 }
@@ -378,10 +380,10 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     $MainFileName = $VarsList.Culture + '.wsx'
     Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
-    foreach ($OneExtraFile in $ConfigYaml.ExtraSourceFiles)
+    foreach ($OneExtraFilePath in $ConfigYaml.ExtraSourceFiles)
     {
         # Substitude all variables in extra group file
-        [string]$Extra = Get-Content -Path "$OneExtraFile" -Encoding UTF8
+        [string]$Extra = Get-Content -Path "$OneExtraFilePath" -Encoding UTF8
         while ($Extra.Contains("`${"))
         {
             foreach ($k in $VarsList.Keys)
@@ -398,7 +400,8 @@ foreach ($OneLoc in $ConfigYaml.Localization)
             $Extra = $Pattern.replace($Extra, "Guid='$Guid'", 1)
         }
 
-        Out-File -InputObject $Extra -FilePath "$WorkingDir\$OneExtraFile" -Encoding utf8 -Force
+        $OneExtraFileName = [System.IO.Path]::GetFileName($OneExtraFilePath)
+        Out-File -InputObject $Extra -FilePath "$WorkingDir\$OneExtraFileName" -Encoding utf8 -Force
     }
 
     Push-Location
