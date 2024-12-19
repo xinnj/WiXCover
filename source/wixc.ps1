@@ -32,6 +32,58 @@ Set-PSDebug -Trace 0
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 
+function SignCode
+{
+    param
+    (
+        [Parameter(Mandatory)][string[]]$File,
+        [Parameter(Mandatory)][string]$CertFile,
+        [Parameter(Mandatory)][string]$CertPassword,
+        [bool]$Replace,
+        [string]$Description
+    )
+
+    if (-not $Replace)
+    {
+        $cert = Get-AuthenticodeSignature -FilePath $File
+        if ($cert.status -eq 'Valid')
+        {
+            return
+        }
+    }
+
+    $timeStampServers = @(
+        "http://time.certum.pl",
+        "http://timestamp.digicert.com",
+        "http://timestamp.comodoca.com/authenticode"
+    )
+    $retryTime = 2
+
+    :finish foreach ($server in $timeStampServers)
+    {
+        for ($i = 0; $i -lt $retryTime; $i++)
+        {
+            if ($Description)
+            {
+                signtool sign /f "$CertFile" /p $CertPassword /t $server /d "$Description" "$File"
+            }
+            else
+            {
+                signtool sign /f "$CertFile" /p $CertPassword /t $server "$File"
+            }
+
+            if (-not$?)
+            {
+                throw "Sign file failed: $File"
+            }
+            else
+            {
+                break finish
+            }
+        }
+    }
+}
+
 function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
 {
     if ($MyList.ContainsKey($MyKey))
@@ -44,7 +96,7 @@ function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
     }
 }
 
-$Env:PATH = "$PSScriptRoot\WiX-v3.11\bin;" + $Env:PATH
+$Env:PATH = "$PSScriptRoot;$PSScriptRoot\WiX-v3.11\bin;" + $Env:PATH
 Import-Module $PSScriptRoot\powershell-yaml
 
 New-Item -ItemType Directory -Force -Path "$WorkingDir"
@@ -198,7 +250,16 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
             $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | %{$_.FullName}
         }
 
-        & "$PSScriptRoot/Sign-Files.ps1" -Files $files -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword
+        $Replace = $False
+        if ($null -ne $ConfigYaml.CodeSign.Replace)
+        {
+            $Replace = $ConfigYaml.CodeSign.Replace
+        }
+
+        foreach ($file in $Files)
+        {
+            SignCode -File "$file" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Replace $Replace
+        }
     }
 
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
@@ -423,7 +484,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Set-Location "$WorkingDir"
     $arch = $ConfigYaml.arch
     $Command = "candle -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraGroupFileNames"
-    echo $Command
+    Write-Host $Command
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {
@@ -486,8 +547,8 @@ if (-not $Output.Contains('\'))
 
 if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $ConfigYaml.CodeSign.fileFilters)
 {
-    echo "Sign msi file..."
-    & "$PSScriptRoot/Sign-Files.ps1" -Files "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword
+    Write-Host "Sign msi file..."
+    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Replace $True -Description $ConfigYaml.Product.Name
 }
 
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"

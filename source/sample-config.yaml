@@ -106,6 +106,8 @@ CodeSign:
   CertFile: ''
   # Password of the pfx file
   CertPassword: ''
+  # Replace existing certification
+  Replace: false
   # Which files in "Files.RootFolder" will be signed
   fileFilters:
     - '*.exe'

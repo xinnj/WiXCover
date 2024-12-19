@@ -138,18 +138,18 @@ $retryTime = 2
 $securePassword = ConvertTo-SecureString -String $CertPassword -Force -AsPlainText
 $certificate = Get-PfxCertificate -FilePath "$CertFile" -Password $securePassword
 
-:next foreach ($file in $Files)
+foreach ($file in $Files)
 {
     if (-not $Replace)
     {
         $cert = Get-AuthenticodeSignature -FilePath $file
         if ($cert.status -eq 'Valid')
         {
-            break next
+            break
         }
     }
 
-    foreach ($server in $timeStampServers)
+    :next foreach ($server in $timeStampServers)
     {
         for ($i = 0; $i -lt $retryTime; $i++)
         {
@@ -157,7 +157,7 @@ $certificate = Get-PfxCertificate -FilePath "$CertFile" -Password $securePasswor
             Set-AuthenticodeSignature -FilePath $file -Certificate $certificate -TimestampServer $server -HashAlgorithm SHA256
             if (Verify-Sign($file))
             {
-                echo "Signed: $file"
+                Write-Host "Signed: $file"
                 break next
             }
         }
