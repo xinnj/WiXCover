@@ -41,6 +41,8 @@ Files:
 
   # The target file that the shortcuts point to. Relative path starting at the root folder defined above.
   MainExecutable: 'quickstart.txt'
+  # The command-line arguments for the shortcut.
+  MainExecutableArguments: ''
 
   Icon:
     # The file providing application icon. Relative path starting at the root folder defined above.

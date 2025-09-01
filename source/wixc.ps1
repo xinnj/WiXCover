@@ -109,6 +109,7 @@ $VarsList.Add("ProductVersion", $ConfigYaml.Product.Version)
 $VarsList.Add("UpgradeCode", $ConfigYaml.UpgradeCode)
 $VarsList.Add("Manufacturer", $ConfigYaml.Manufacturer)
 $VarsList.Add("MainExecutable", $ConfigYaml.Files.MainExecutable)
+$VarsList.Add("MainExecutableArguments", $ConfigYaml.Files.MainExecutableArguments)
 
 
 $VarsList.Add("IconFile", $ConfigYaml.Files.Icon.File)
@@ -428,12 +429,21 @@ foreach ($OneLoc in $ConfigYaml.Localization)
 
     # Substitude all variables in template file
     [string]$Template = Get-Content -Path "$TemplateFile" -Encoding UTF8
-    while ($Template.Contains("`${"))
-    {
+    $maxIterations = 5  # Prevent infinite loops
+    $iteration = 0
+    while ($Template.Contains("`${") -and $iteration -lt $maxIterations) {
+        $iteration++
+
         foreach ($k in $VarsList.Keys)
         {
             $Template = $Template.Replace("`$`{$k`}", $VarsList.$k)
         }
+    }
+
+    if ($iteration -ge $maxIterations) {
+        # Detect unresolved variables
+        $unresolvedVars = [regex]::Matches($Template, '\$\{(.+?)\}') | ForEach-Object { $_.Groups[1].Value }
+        throw "The following variables were not resolved: $($unresolvedVars -join ', ')"
     }
 
     # Substitude all guid in template file

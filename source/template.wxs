@@ -28,7 +28,8 @@
             <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Name='InstallScope' Type='string' Value='[FinalInstallScope]' KeyPath='no' />
             <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Name='InstallDir' Type='string' Value='[APPLICATIONFOLDER]' KeyPath='no' />
             <Shortcut Id='startmenushortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
-              Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
+              Target='[APPLICATIONFOLDER]${MainExecutable}' Arguments='${MainExecutableArguments}'
+              WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
             <Shortcut Id='UninstallProduct' Name='${LocUninstall} ${ProductNameLoc}' Description='${LocUninstall} ${ProductNameLoc}'
               Target='[${SystemFolder}]msiexec.exe' Arguments='/x [ProductCode]'/>
           </Component>
@@ -40,7 +41,8 @@
           <RemoveFolder Id='DesktopMenuDir' On='uninstall' />
           <RegistryValue Root='HKCU' Key='Software\${Manufacturer}\${ProductName}' Type='string' Value='' KeyPath='yes' />
           <Shortcut Id='desktopshortcut' Name='${ProductNameLoc}' Description='${ProductNameLoc}'
-            Target='[APPLICATIONFOLDER]${MainExecutable}' WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
+            Target='[APPLICATIONFOLDER]${MainExecutable}' Arguments='${MainExecutableArguments}'
+            WorkingDirectory='APPLICATIONFOLDER' Icon='${IconId}' IconIndex='${IconIndex}' />
           </Component>
       </Directory>
     </Directory>
@@ -130,8 +132,8 @@
 
     ${LaunchApplicationChecked}
     ${LaunchApplicationText}
-    <Property Id='WixShellExecTarget' Value='[APPLICATIONFOLDER]\${MainExecutable}' />
-    <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
+    <Property Id='WixShellExecTarget' Value='[ProgramMenuDir]${ProductNameLoc}.lnk' />
+    <CustomAction Id='' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
 
     <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder" Property="WixPerMachineFolder"
       Value="[${ProgramFilesFolder}][ApplicationFolderName]" Execute="immediate" />
