@@ -109,8 +109,15 @@ $VarsList.Add("ProductVersion", $ConfigYaml.Product.Version)
 $VarsList.Add("UpgradeCode", $ConfigYaml.UpgradeCode)
 $VarsList.Add("Manufacturer", $ConfigYaml.Manufacturer)
 $VarsList.Add("MainExecutable", $ConfigYaml.Files.MainExecutable)
-$VarsList.Add("MainExecutableArguments", $ConfigYaml.Files.MainExecutableArguments)
 
+if ([string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
+{
+    $VarsList.Add("MainExecutableArgumentsTxt", " ")
+}
+else
+{
+    $VarsList.Add("MainExecutableArgumentsTxt", "Arguments='" + $ConfigYaml.Files.MainExecutableArguments + "'")
+}
 
 $VarsList.Add("IconFile", $ConfigYaml.Files.Icon.File)
 $VarsList.Add("IconIndex",$ConfigYaml.Files.Icon.Index.ToString())
@@ -233,6 +240,16 @@ else
     $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
     $VarsList.Add("LaunchApplicationText", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} `${ProductNameLoc}' /> -->")
 
+}
+
+# Auto start
+if ($ConfigYaml.AutoStart)
+{
+    $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='[ProgramMenuDir]`${ProductNameLoc}.lnk' KeyPath='no' />")
+}
+else
+{
+    $VarsList.Add("AutoStart", "<!-- Auto start is disabled -->")
 }
 
 # Generate file group
