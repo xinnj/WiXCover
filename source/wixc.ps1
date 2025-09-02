@@ -235,6 +235,16 @@ else
 
 }
 
+# Auto start
+if ($ConfigYaml.AutoStart)
+{
+    $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='[ProgramMenuDir]`${ProductNameLoc}.lnk' KeyPath='no' />")
+}
+else
+{
+    $VarsList.Add("AutoStart", "<!-- Auto start is disabled -->")
+}
+
 # Generate file group
 if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 {

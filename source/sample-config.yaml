@@ -99,9 +99,11 @@ KillProcess: false
 LaunchApplication:
   # Show a checkbox to launch the application after the installation if enabled.
   Enable: false
-
   # The checkbox is checked or not by default.
   CheckedByDefault: true
+
+# Auto start the application when user logon.
+AutoStart: false
 
 CodeSign:
   # pfx file path
