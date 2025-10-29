@@ -119,3 +119,7 @@ CodeSign:
 
 # Additional parameters for light.exe
 LightParams: ''
+
+# Extra WiX XML configuration snippet to be included in the main .wxs file.
+TemplateExtraConfig: |
+    <!-- Add your extra WiX XML configuration here. -->

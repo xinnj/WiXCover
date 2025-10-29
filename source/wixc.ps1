@@ -124,6 +124,15 @@ $VarsList.Add("IconIndex",$ConfigYaml.Files.Icon.Index.ToString())
 $IconExt = $ConfigYaml.Files.Icon.File.split('.')[-1]
 $VarsList.Add("IconId", "icon." + $IconExt)
 
+if ($ConfigYaml.TemplateExtraConfig)
+{
+    $VarsList.Add("TemplateExtraConfig", $ConfigYaml.TemplateExtraConfig)
+}
+else
+{
+    $VarsList.Add("TemplateExtraConfig", "<!-- No extra config -->")
+}
+
 # check arch
 if ($ConfigYaml.arch -eq 'x86')
 {

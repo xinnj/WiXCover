@@ -171,5 +171,7 @@
 
       ${LaunchApplication}
     </UI>
+
+    ${TemplateExtraConfig}
   </Product>
 </Wix>
