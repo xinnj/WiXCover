@@ -521,7 +521,14 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     $ClutersParameter = '-cultures:' + $VarsList.Culture
     $MsiName = $VarsList.Culture + '.msi'
     $MainObjName = $VarsList.Culture + '.wixobj'
-    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraGroupObjFileNames"
+
+    $LightParams = ''
+    if ($ConfigYaml.LightParams)
+    {
+        $LightParams = $ConfigYaml.LightParams
+    }
+
+    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraGroupObjFileNames"
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {

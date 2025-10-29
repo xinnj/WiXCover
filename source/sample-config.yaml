@@ -116,3 +116,6 @@ CodeSign:
   fileFilters:
     - '*.exe'
     - '*.dll'
+
+# Additional parameters for light.exe
+LightParams: ''
