@@ -95,6 +95,8 @@ InstallScope:
 
 # Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
 KillProcess: false
+# Kill additional processes during the installation if KillProcess is true.
+KillAdditionalProcesses: []
 
 LaunchApplication:
   # Show a checkbox to launch the application after the installation if enabled.

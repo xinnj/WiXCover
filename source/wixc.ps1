@@ -217,6 +217,16 @@ switch ($ConfigYaml.InstallScope.Mode)
 }
 
 # Kill process
+$KillProcessParams = "/IM " + (Split-Path $VarsList.MainExecutable -leaf)
+if ($ConfigYaml.KillAdditionalProcesses)
+{
+    foreach ($OneProcess in $ConfigYaml.KillAdditionalProcesses)
+    {
+        $KillProcessParams = $KillProcessParams + " /IM " + $OneProcess
+    }
+}
+$VarsList.Add("KillProcessParams", $KillProcessParams)
+
 if ($ConfigYaml.KillProcess)
 {
     $VarsList.Add("KillProcess", "<Custom Action='KillProcess' Before='InstallValidate'/>")
@@ -225,7 +235,6 @@ else
 {
     $VarsList.Add("KillProcess", "<!-- <Custom Action='KillProcess' Before='InstallValidate'/> -->")
 }
-$VarsList.Add("ProcessName", (Split-Path $VarsList.MainExecutable -leaf))
 
 # Launch app
 if ($ConfigYaml.LaunchApplication.Enable)
