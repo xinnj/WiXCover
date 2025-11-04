@@ -263,7 +263,16 @@ else
 # Auto start
 if ($ConfigYaml.AutoStart)
 {
-    $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='[ProgramMenuDir]`${ProductNameLoc}.lnk' KeyPath='no' />")
+    $MainExecutable = $VarsList.MainExecutable
+    if ([string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
+    {
+        $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='[APPLICATIONFOLDER]${MainExecutable}' KeyPath='no' />")
+    }
+    else
+    {
+        $MainExecutableArguments = $ConfigYaml.Files.MainExecutableArguments
+        $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='`"[APPLICATIONFOLDER]${MainExecutable}`" ${MainExecutableArguments}' KeyPath='no' />")
+    }
 }
 else
 {
