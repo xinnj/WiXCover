@@ -241,12 +241,12 @@ if ($ConfigYaml.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
 
-    $LaunchApplicationText = '`${ProductNameLoc}'
+    $LaunchApplicationText = '${LocLaunch} ${ProductNameLoc}'
     if ($ConfigYaml.Localization[0].LaunchApplicationText -and ($ConfigYaml.Localization[0].LaunchApplicationText -ne ''))
     {
-        $LaunchApplicationText = '`${LaunchApplicationText}'
+        $LaunchApplicationText = '${LaunchApplicationText}'
     }
-    $VarsList.Add("LaunchApplicationTextProperty", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} ${LaunchApplicationText}' />")
+    $VarsList.Add("LaunchApplicationTextProperty", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='${LaunchApplicationText}' />")
 
     if ($ConfigYaml.LaunchApplication.CheckedByDefault)
     {
@@ -257,10 +257,13 @@ if ($ConfigYaml.LaunchApplication.Enable)
         $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
     }
 
-    $LaunchApplicationTarget = '[ProgramMenuFolder]`${ProductNameLoc}\`${ProductNameLoc}.lnk'
+    $LaunchApplicationTarget = '[ProgramMenuFolder]${ProductNameLoc}\${ProductNameLoc}.lnk'
     if ($ConfigYaml.LaunchApplication.ExecTarget -and ($ConfigYaml.LaunchApplication.ExecTarget -ne ''))
     {
         $LaunchApplicationTarget = $ConfigYaml.LaunchApplication.ExecTarget
+        if ($LaunchApplicationTarget -match '\s') {
+            throw "LaunchApplication.ExecTarget can not contain whitespace (space, tab, etc.)"
+        }
     }
     $VarsList.Add("LaunchApplicationTarget", $LaunchApplicationTarget)
 }
@@ -410,30 +413,28 @@ else
     $EnvGroupObjFileName = ""
 }
 
-# Generate extra groups
+# Handle extra wxs files. Generate extra groups or include fragments
+$ExtraWxsFileNames = ""
+$ExtraObjFileNames = ""
+$ExtraGroups = ""
 if ($ConfigYaml.ExtraSourceFiles)
 {
-    $ExtraGroups = ""
-    $ExtraGroupFileNames = ""
-    $ExtraGroupObjFileNames = ""
-    foreach ($OneExtraFilePath in $ConfigYaml.ExtraSourceFiles)
+    foreach ($OneFilePath in $ConfigYaml.ExtraSourceFiles)
     {
-        [string]$ExtraFileContent = Get-Content -Path "$OneExtraFilePath" -Encoding UTF8
+        [string]$ExtraFileContent = Get-Content -Path "$OneFilePath" -Encoding UTF8
         if ($ExtraFileContent -match "<ComponentGroup Id=[`"'](.+?)[`"']>")
         {
             $ComponentGroupId = $matches[1]
-        }
-        else
-        {
-            throw "File $OneExtraFilePath doesn't have ComponentGroup!"
+            $ExtraGroups = $ExtraGroups + "<ComponentGroupRef Id='$ComponentGroupId'/>`n"
         }
 
-        $ExtraGroups = $ExtraGroups + "<ComponentGroupRef Id='$ComponentGroupId'/>`n"
-
-        $OneExtraFileName = [System.IO.Path]::GetFileName($OneExtraFilePath)
-        $ExtraGroupFileNames = $ExtraGroupFileNames + "'" + $OneExtraFileName + "' "
-        $ExtraGroupObjFileNames = $ExtraGroupObjFileNames + "'" + [System.IO.Path]::GetFileNameWithoutExtension($OneExtraFileName) + ".wixobj' "
+        $OneFileName = [System.IO.Path]::GetFileName($OneFilePath)
+        $ExtraWxsFileNames = $ExtraWxsFileNames + "'" + $OneFileName + "' "
+        $ExtraObjFileNames = $ExtraObjFileNames + "'" + [System.IO.Path]::GetFileNameWithoutExtension($OneFileName) + ".wixobj' "
     }
+}
+if ($ExtraGroups)
+{
     $VarsList.Add("ExtraGroups", $ExtraGroups)
 }
 else
@@ -522,10 +523,10 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     $MainFileName = $VarsList.Culture + '.wsx'
     Out-File -InputObject $Template -FilePath "$WorkingDir\$MainFileName" -Encoding utf8 -Force
 
-    foreach ($OneExtraFilePath in $ConfigYaml.ExtraSourceFiles)
+    foreach ($OneFilePath in $ConfigYaml.ExtraSourceFiles)
     {
         # Substitude all variables in extra group file
-        [string]$Extra = Get-Content -Path "$OneExtraFilePath" -Encoding UTF8
+        [string]$Extra = Get-Content -Path "$OneFilePath" -Encoding UTF8
         while ($Extra.Contains("`${"))
         {
             foreach ($k in $VarsList.Keys)
@@ -542,14 +543,14 @@ foreach ($OneLoc in $ConfigYaml.Localization)
             $Extra = $Pattern.replace($Extra, "Guid='$Guid'", 1)
         }
 
-        $OneExtraFileName = [System.IO.Path]::GetFileName($OneExtraFilePath)
-        Out-File -InputObject $Extra -FilePath "$WorkingDir\$OneExtraFileName" -Encoding utf8 -Force
+        $OneFileName = [System.IO.Path]::GetFileName($OneFilePath)
+        Out-File -InputObject $Extra -FilePath "$WorkingDir\$OneFileName" -Encoding utf8 -Force
     }
 
     Push-Location
     Set-Location "$WorkingDir"
     $arch = $ConfigYaml.arch
-    $Command = "candle -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraGroupFileNames"
+    $Command = "candle -ext WiXUtilExtension -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraWxsFileNames"
     Write-Host $Command
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
@@ -567,7 +568,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         $LightParams = $ConfigYaml.LightParams
     }
 
-    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraGroupObjFileNames"
+    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraObjFileNames"
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {
