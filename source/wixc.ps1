@@ -241,7 +241,12 @@ if ($ConfigYaml.LaunchApplication.Enable)
 {
     $VarsList.Add("LaunchApplication", "<Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>")
 
-    $VarsList.Add("LaunchApplicationText", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} `${ProductNameLoc}' />")
+    $LaunchApplicationText = '`${ProductNameLoc}'
+    if ($ConfigYaml.Localization[0].LaunchApplicationText -and ($ConfigYaml.Localization[0].LaunchApplicationText -ne ''))
+    {
+        $LaunchApplicationText = '`${LaunchApplicationText}'
+    }
+    $VarsList.Add("LaunchApplicationTextProperty", "<Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} ${LaunchApplicationText}' />")
 
     if ($ConfigYaml.LaunchApplication.CheckedByDefault)
     {
@@ -251,12 +256,19 @@ if ($ConfigYaml.LaunchApplication.Enable)
     {
         $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
     }
+
+    $LaunchApplicationTarget = '[ProgramMenuFolder]`${ProductNameLoc}\`${ProductNameLoc}.lnk'
+    if ($ConfigYaml.LaunchApplication.ExecTarget -and ($ConfigYaml.LaunchApplication.ExecTarget -ne ''))
+    {
+        $LaunchApplicationTarget = $ConfigYaml.LaunchApplication.ExecTarget
+    }
+    $VarsList.Add("LaunchApplicationTarget", $LaunchApplicationTarget)
 }
 else
 {
     $VarsList.Add("LaunchApplication", "<!-- <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish> -->")
     $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
-    $VarsList.Add("LaunchApplicationText", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='`${LocLaunch} `${ProductNameLoc}' /> -->")
+    $VarsList.Add("LaunchApplicationTextProperty", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='' /> -->")
 
 }
 

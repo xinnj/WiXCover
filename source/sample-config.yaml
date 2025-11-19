@@ -28,6 +28,8 @@ Localization:
   ManufacturerLoc: ''
   # License agreement terms in localized language, RTF format is needed.
   LicenseFile: ''
+  # The text displayed next to the Launch Application checkbox. Empty means using default text.
+  LaunchApplicationText: ''
 #-
 #  Culture: 'zh-cn'
 #  ProductNameLoc: ''
@@ -103,6 +105,8 @@ LaunchApplication:
   Enable: false
   # The checkbox is checked or not by default.
   CheckedByDefault: true
+  # The target command to launch. Empty means using the main executable.
+  ExecTarget: ''
 
 # Auto start the application when user logon.
 AutoStart: false
