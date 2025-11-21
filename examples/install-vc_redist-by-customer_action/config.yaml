@@ -1,0 +1,143 @@
+#  architecture defaults for package,  x86 or x64.
+arch: 'x86'
+
+Product:
+  # Will be part of installation path, English only is preferred.
+  Name: ''
+
+  # Will be used to control upgrade process, SemVer is recommended.
+  Version: ''
+
+# A GUID code. Should be kept unchanged for various versions of same product, but different with other products.
+# Can use the command below to generate.
+# powershell.exe -nologo -noprofile -command "[guid]::NewGuid().ToString().ToUpper()"
+UpgradeCode: ''
+
+# Will be part of installation path, English only is preferred.
+Manufacturer: ''
+
+# At least one culture is needed. Supported culture can be found at:
+# https://www.firegiant.com/wix/tutorial/user-interface/do-you-speak-english/
+Localization:
+-
+  # Culture name
+  Culture: 'en-us'
+  # Product name in localized language
+  ProductNameLoc: ''
+  # Manufacture name in localized language
+  ManufacturerLoc: ''
+  # License agreement terms in localized language, RTF format is needed.
+  LicenseFile: ''
+  # The text displayed next to the Launch Application checkbox. Empty means using default text.
+  LaunchApplicationText: 'Install MICROSOFT VISUAL C++ RUNTIME (required)'
+#-
+#  Culture: 'zh-cn'
+#  ProductNameLoc: ''
+#  ManufacturerLoc: ''
+#  LicenseFile: ''
+
+Files:
+  # The files and directories in the installer package that will be installed on customers' computer.
+  # Root folder itself will NOT be included.
+  RootFolder: ''
+
+  # The target file that the shortcuts point to. Relative path starting at the root folder defined above.
+  MainExecutable: ''
+  # The command-line arguments for the shortcut.
+  MainExecutableArguments: ''
+
+  Icon:
+    # The file providing application icon. Relative path starting at the root folder defined above.
+    File: ''
+    Index: 0
+
+Regs:
+  # The directory containing exported registry files.
+  RootFolder: ''
+
+  # Set to 'true', all 'HKCU' and "HKLM" root path will be converted to 'HKMU'.
+  ConvertToHKMU: true
+
+Envs:
+  -
+    # Name of the environment variable
+    Name: ''
+    # create / set / remove
+    Action: ''
+    # yes / no
+    Permanent: ''
+    # yes / no. Caution: If set to 'yes', but install scope is current user, the installation will fail.
+    System: ''
+    # all / first / last
+    Part: ''
+    # The value to set into the environment variable
+    Value: ''
+
+# Specify wix source files (.wxs) to be complied directly. Two examples can be found here:
+# https://github.com/xinnj/WiXCover/blob/main/source/sample-extras1.wxs
+# https://github.com/xinnj/WiXCover/blob/main/source/sample-extras2.wxs
+# All variables in source files will be substituted by real values. All empty guid like "Guid=''", will be substituted by real guid value.
+ExtraSourceFiles: []
+
+Upgrade:
+  # A lower version package can be installed or not.
+  AllowDowngrades: false
+
+  # The same version package can be installed or not.
+  AllowSameVersionUpgrades: true
+
+# user / machine
+InstallScope:
+  # 'user': install just for current user
+  # 'machine': install for all users of the machine
+  # 'both': user can select the installation mode
+  Mode: ''
+  # the default mode if Mode = 'both'
+  DefaultMode: ''
+
+# Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
+KillProcess: false
+# Kill additional processes during the installation if KillProcess is true.
+KillAdditionalProcesses: []
+
+LaunchApplication:
+  # Show a checkbox to launch the application after the installation if enabled.
+  Enable: true
+  # The checkbox is checked or not by default.
+  CheckedByDefault: true
+  # The target command to launch. Empty means using the main executable.
+  ExecTarget: '[APPLICATIONFOLDER]\vc_redist.x86.exe'
+
+# Auto start the application when user logon.
+AutoStart: false
+
+CodeSign:
+  # pfx file path
+  CertFile: ''
+  # Password of the pfx file
+  CertPassword: ''
+  # Replace existing certification
+  Replace: false
+  # Which files in "Files.RootFolder" will be signed
+  fileFilters:
+    - '*.exe'
+    - '*.dll'
+
+# Additional parameters for light.exe
+LightParams: ''
+
+# Extra WiX XML configuration snippet to be included in the main .wxs file.
+TemplateExtraConfig: |
+  <Property Id="VCREDISTINSTALLED">
+    <RegistrySearch Id="VCRedistCheck" 
+                    Root="HKLM" 
+                    Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X86" 
+                    Name="Installed" 
+                    Type="raw" />
+  </Property>
+  <SetProperty Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="" After="AppSearch">
+    <![CDATA[VCREDISTINSTALLED]]>
+  </SetProperty>
+  <SetProperty Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="0" After="AppSearch">
+    <![CDATA[VCREDISTINSTALLED]]>
+  </SetProperty>
