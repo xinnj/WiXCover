@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity tagId="msi:package/C162C5D6-DC24-46D8-B9CF-89B7FEFDAACF" name="WiX Toolset v3.14 Native 2012 SDK" version="3.14.8722.0" versionScheme="multipartnumeric" xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd">
+  <Entity name=".NET Foundation" regid="wixtoolset.org" role="softwareCreator tagCreator" />
+  <Meta persistentId="msi:upgrade/C1450CC3-3F3F-481E-AC13-E09FAF44FA54" />
+</SoftwareIdentity>

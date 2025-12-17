@@ -96,7 +96,7 @@ function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
     }
 }
 
-$Env:PATH = "$PSScriptRoot;$PSScriptRoot\WiX-v3.11\bin;" + $Env:PATH
+$Env:PATH = "$PSScriptRoot;$PSScriptRoot\WiX-v3.14.1\bin;" + $Env:PATH
 Import-Module $PSScriptRoot\powershell-yaml
 
 New-Item -ItemType Directory -Force -Path "$WorkingDir"
