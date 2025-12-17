@@ -20,7 +20,7 @@
     The directory to store the temporary files. (optional)
 #>
 
-    [CmdletBinding()]
+[CmdletBinding()]
 param (
     [Parameter(Mandatory)][string]$Config,
     [Parameter(Mandatory)][string]$Output,
@@ -72,7 +72,7 @@ function SignCode
                 signtool sign /f "$CertFile" /p $CertPassword /t $server "$File"
             }
 
-            if (-not$?)
+            if (-not $?)
             {
                 throw "Sign file failed: $File"
             }
@@ -86,7 +86,7 @@ function SignCode
 
 function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
 {
-    if ($MyList.ContainsKey($MyKey))
+    if ( $MyList.ContainsKey($MyKey))
     {
         $MyList[$MyKey] = $MyValue
     }
@@ -110,7 +110,7 @@ $VarsList.Add("UpgradeCode", $ConfigYaml.UpgradeCode)
 $VarsList.Add("Manufacturer", $ConfigYaml.Manufacturer)
 $VarsList.Add("MainExecutable", $ConfigYaml.Files.MainExecutable)
 
-if ([string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
+if ( [string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
 {
     $VarsList.Add("MainExecutableArgumentsTxt", " ")
 }
@@ -261,7 +261,8 @@ if ($ConfigYaml.LaunchApplication.Enable)
     if ($ConfigYaml.LaunchApplication.ExecTarget -and ($ConfigYaml.LaunchApplication.ExecTarget -ne ''))
     {
         $LaunchApplicationTarget = $ConfigYaml.LaunchApplication.ExecTarget
-        if ($LaunchApplicationTarget -match '\s') {
+        if ($LaunchApplicationTarget -match '\s')
+        {
             throw "LaunchApplication.ExecTarget can not contain whitespace (space, tab, etc.)"
         }
     }
@@ -279,7 +280,7 @@ else
 if ($ConfigYaml.AutoStart)
 {
     $MainExecutable = $VarsList.MainExecutable
-    if ([string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
+    if ( [string]::IsNullOrEmpty($ConfigYaml.Files.MainExecutableArguments))
     {
         $VarsList.Add("AutoStart", "<RegistryValue Root='HKMU' Key='Software\Microsoft\Windows\CurrentVersion\Run' Name='`${ProductNameLoc}' Type='string' Value='[APPLICATIONFOLDER]${MainExecutable}' KeyPath='no' />")
     }
@@ -295,9 +296,10 @@ else
 }
 
 # Generate file group
+$FirewallExt = ""
 if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 {
-    $FileRootfolder = Resolve-Path -LiteralPath "$($ConfigYaml.Files.RootFolder)"
+    $FileRootfolder = Resolve-Path -LiteralPath "$( $ConfigYaml.Files.RootFolder )"
     $FileRootfolder = $FileRootfolder -replace '\\$', ''
 
     # Sign code
@@ -307,7 +309,7 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
         $files = @()
         foreach ($OneFilter in $ConfigYaml.CodeSign.fileFilters)
         {
-            $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | %{$_.FullName}
+            $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | %{ $_.FullName }
         }
 
         $Replace = $False
@@ -323,7 +325,7 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
     }
 
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
-    if (-not$?)
+    if (-not $?)
     {
         throw 'Native Failure'
     }
@@ -332,11 +334,82 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 
     $FileGroupFileName = "FileGroup.wxs"
     $FileGroupObjFileName = "FileGroup.wixobj"
+
+    if ($ConfigYaml.FirewallException)
+    {
+        # Read file as single string, build insertion with here-string to avoid quoting issues
+        $content = Get-Content "$WorkingDir\FileGroup.wxs" -Raw
+
+        foreach ($fe in $ConfigYaml.FirewallException)
+        {
+            if ($fe.File -and ($fe.File -ne ''))
+            {
+                $nameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($fe.File)
+                $ID = "FirewallException_" + $nameWithoutExt
+
+                $Profile = "Profile='all'"
+                if ($fe.Profile -and ($fe.Profile -ne ''))
+                {
+                    $Profile = "Profile='$( $fe.Profile )'"
+                }
+
+                $Scope = "Scope='any'"
+                if ($fe.Scope -and ($fe.Scope -ne ''))
+                {
+                    $Scope = "Scope='$( $fe.Scope )'"
+                }
+
+                $RemoteAddress = ''
+                if ($fe.RemoteAddress)
+                {
+                    $Scope = ''
+                    foreach ($addr in $fe.RemoteAddress)
+                    {
+                        $RemoteAddress = $RemoteAddress + " <fire:RemoteAddress>$addr</fire:RemoteAddress>"
+                    }
+                }
+
+                $Port = ''
+                if ($fe.Port -and ($fe.Port -ne ''))
+                {
+                    $Port = "Port='$( $fe.Port )'"
+                }
+
+                $Protocol = ''
+                if ($fe.Protocol -and ($fe.Protocol -ne ''))
+                {
+                    $Protocol = "Protocol='$( $fe.Protocol )'"
+                }
+
+                $pattern = "(\s*)<File Id=`"(.+?)`" .* Source=`".*$( $fe.File )`" />"
+                foreach ($line in $content -split "`r?`n")
+                {
+                    if ($line -match $pattern)
+                    {
+                        $leadingSpaces = $matches[1]
+                        $fileId = $matches[2]
+                        $insert = @"
+$line
+$leadingSpaces<fire:FirewallException Id="$ID" Name="$nameWithoutExt" Program="[#$fileId]" $Profile $Scope $Port $Protocol>
+$leadingSpaces$RemoteAddress
+$leadingSpaces</fire:FirewallException>
+"@
+                        $content = $content.Replace($line, $insert)
+                    }
+                }
+            }
+        }
+
+        $content = $content.Replace('<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">', '<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">')
+        Set-Content -Path "$WorkingDir\FileGroup.wxs" -Value $content -Encoding utf8
+
+        $FirewallExt = "-ext WixFirewallExtension"
+    }
 }
 else
 {
     $VarsList.Add("FileGroup", "<!-- <ComponentGroupRef Id='FileGroup' /> -->")
-    $FileRootfolder= "."
+    $FileRootfolder = "."
     $FileGroupFileName = ""
     $FileGroupObjFileName = ""
 }
@@ -348,7 +421,7 @@ if ($ConfigYaml.Regs.RootFolder -and ($ConfigYaml.Regs.RootFolder -ne ''))
     $RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
     Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
     heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
-    if (-not$?)
+    if (-not $?)
     {
         throw 'Native Failure'
     }
@@ -386,9 +459,9 @@ if ($ConfigYaml.Envs -and ($ConfigYaml.Envs.Count -gt 0))
         $Guid = [guid]::NewGuid().ToString()
         $c = @"
       <Component Id="Env_$i" Directory="TARGETDIR" Guid="$Guid" KeyPath="yes">
-        <Environment Id="Env_$i" Name="$($ConfigYaml.Envs[$i].Name)" Action="$($ConfigYaml.Envs[$i].Action)"
-        Permanent="$($ConfigYaml.Envs[$i].Permanent)" System="$($ConfigYaml.Envs[$i].System)"
-        Part="$($ConfigYaml.Envs[$i].Part)" Value="$($ConfigYaml.Envs[$i].Value)" />
+        <Environment Id="Env_$i" Name="$( $ConfigYaml.Envs[$i].Name )" Action="$( $ConfigYaml.Envs[$i].Action )"
+        Permanent="$( $ConfigYaml.Envs[$i].Permanent )" System="$( $ConfigYaml.Envs[$i].System )"
+        Part="$( $ConfigYaml.Envs[$i].Part )" Value="$( $ConfigYaml.Envs[$i].Value )" />
       </Component>
 "@
         $c | Out-File "$WorkingDir\EnvGroup.wxs" -Append -Encoding utf8
@@ -479,7 +552,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
             throw "$k is empty!"
         }
         Remove-Variable -Name "$k" -ErrorAction SilentlyContinue
-        New-Variable -Name "$k" -Value $($VarsList.$k)
+        New-Variable -Name "$k" -Value $( $VarsList.$k )
     }
 
     $CultureLanguage.Add($VarsList.Culture, $VarsList.Language)
@@ -488,7 +561,8 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     [string]$Template = Get-Content -Path "$TemplateFile" -Encoding UTF8
     $maxIterations = 5  # Prevent infinite loops
     $iteration = 0
-    while ($Template.Contains("`${") -and $iteration -lt $maxIterations) {
+    while ($Template.Contains("`${") -and $iteration -lt $maxIterations)
+    {
         $iteration++
 
         foreach ($k in $VarsList.Keys)
@@ -497,10 +571,11 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         }
     }
 
-    if ($iteration -ge $maxIterations) {
+    if ($iteration -ge $maxIterations)
+    {
         # Detect unresolved variables
         $unresolvedVars = [regex]::Matches($Template, '\$\{(.+?)\}') | ForEach-Object { $_.Groups[1].Value }
-        throw "The following variables were not resolved: $($unresolvedVars -join ', ')"
+        throw "The following variables were not resolved: $( $unresolvedVars -join ', ' )"
     }
 
     # Substitude all guid in template file
@@ -512,7 +587,8 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     }
 
     # Remove AllowSameVersionUpgrades & DowngradeErrorMessage if AllowDowngrades
-    if ($ConfigYaml.Upgrade.AllowDowngrades) {
+    if ($ConfigYaml.Upgrade.AllowDowngrades)
+    {
         [regex]$Pattern = "AllowSameVersionUpgrades=['`"].*?['`"]"
         $Template = $Pattern.replace($Template, "", 1)
 
@@ -527,7 +603,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     {
         # Substitude all variables in extra group file
         [string]$Extra = Get-Content -Path "$OneFilePath" -Encoding UTF8
-        while ($Extra.Contains("`${"))
+        while ( $Extra.Contains("`${"))
         {
             foreach ($k in $VarsList.Keys)
             {
@@ -550,7 +626,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Push-Location
     Set-Location "$WorkingDir"
     $arch = $ConfigYaml.arch
-    $Command = "candle -ext WiXUtilExtension -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraWxsFileNames"
+    $Command = "candle -ext WiXUtilExtension $FirewallExt -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraWxsFileNames"
     Write-Host $Command
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
@@ -558,7 +634,13 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         throw 'Invoke-Expression Failure'
     }
 
-    $ClutersParameter = '-cultures:' + $VarsList.Culture
+    $Culture = $VarsList.Culture
+    if ($Culture -ne 'en-us')
+    {
+        $Culture = $Culture + ';en-us'
+    }
+    $ClutersParameter = "-cultures:'" + $Culture + "'"
+
     $MsiName = $VarsList.Culture + '.msi'
     $MainObjName = $VarsList.Culture + '.wixobj'
 
@@ -568,7 +650,8 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         $LightParams = $ConfigYaml.LightParams
     }
 
-    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraObjFileNames"
+    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $FirewallExt $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraObjFileNames"
+    Write-Host $Command
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {
@@ -590,12 +673,12 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
         {
             $CurrentCulture = $k
             torch -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
-            if (-not$?)
+            if (-not $?)
             {
                 throw 'Native Failure'
             }
             cscript $PSScriptRoot\i18n\WiSubStg.vbs "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.mst" $CultureLanguage.$k
-            if (-not$?)
+            if (-not $?)
             {
                 throw 'Native Failure'
             }
@@ -604,7 +687,7 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
 
     $Languages = [Array]$CultureLanguage.Values -join ','
     cscript $PSScriptRoot\i18n\WiLangId.vbs "$WorkingDir\${FirstCulture}`.msi" Package $Languages
-    if (-not$?)
+    if (-not $?)
     {
         throw 'Native Failure'
     }
@@ -628,7 +711,7 @@ if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $C
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
 Write-Output "MSI package generated at: $Output"
 
-if (-not$PSBoundParameters['Debug'])
+if (-not $PSBoundParameters['Debug'])
 {
     Remove-Item -Force -Recurse "$WorkingDir"
 }

@@ -19,17 +19,16 @@ Manufacturer: ''
 # At least one culture is needed. Supported culture can be found at:
 # https://www.firegiant.com/wix/tutorial/user-interface/do-you-speak-english/
 Localization:
--
-  # Culture name
-  Culture: 'en-us'
-  # Product name in localized language
-  ProductNameLoc: ''
-  # Manufacture name in localized language
-  ManufacturerLoc: ''
-  # License agreement terms in localized language, RTF format is needed.
-  LicenseFile: ''
-  # The text displayed next to the Launch Application checkbox. Empty means using default text.
-  LaunchApplicationText: ''
+  - # Culture name
+    Culture: 'en-us'
+    # Product name in localized language
+    ProductNameLoc: ''
+    # Manufacture name in localized language
+    ManufacturerLoc: ''
+    # License agreement terms in localized language, RTF format is needed.
+    LicenseFile: ''
+    # The text displayed next to the Launch Application checkbox. Empty means using default text.
+    LaunchApplicationText: ''
 #-
 #  Culture: 'zh-cn'
 #  ProductNameLoc: ''
@@ -59,8 +58,7 @@ Regs:
   ConvertToHKMU: true
 
 Envs:
-  -
-    # Name of the environment variable
+  - # Name of the environment variable
     Name: ''
     # create / set / remove
     Action: ''
@@ -77,7 +75,7 @@ Envs:
 # https://github.com/xinnj/WiXCover/blob/main/source/sample-extras1.wxs
 # https://github.com/xinnj/WiXCover/blob/main/source/sample-extras2.wxs
 # All variables in source files will be substituted by real values. All empty guid like "Guid=''", will be substituted by real guid value.
-ExtraSourceFiles: []
+ExtraSourceFiles: [ ]
 
 Upgrade:
   # A lower version package can be installed or not.
@@ -98,7 +96,7 @@ InstallScope:
 # Kill the process named by 'MainExecutable' during the installation to avoid penitential machine restart.
 KillProcess: false
 # Kill additional processes during the installation if KillProcess is true.
-KillAdditionalProcesses: []
+KillAdditionalProcesses: [ ]
 
 LaunchApplication:
   # Show a checkbox to launch the application after the installation if enabled.
@@ -128,4 +126,14 @@ LightParams: ''
 
 # Extra WiX XML configuration snippet to be included in the main .wxs file.
 TemplateExtraConfig: |
-    <!-- Add your extra WiX XML configuration here. -->
+  <!-- Add your extra WiX XML configuration here. -->
+
+# Register firewall exceptions during installation.
+FirewallException: [ ]
+  # - File: ''
+  #   Profile: '' # domain / private / public / all, default is all
+  #   Scope: ''   # localSubnet / any, default is any
+  #   RemoteAddress: # specify allowed remote address. Scope wil be ignored if this is set.
+  #     - ''  # IP address or IP range like
+  #   Port: ''    # port number or port range like 8000-9000, default is empty
+  #   Protocol: '' # TCP / UDP, default is TCP
