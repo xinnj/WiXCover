@@ -128,6 +128,7 @@ CodeSign:
 LightParams: '-ext WixNetFxExtension'
 
 # Extra WiX XML configuration snippet to be included in the main .wxs file.
+# ${DotnetMessage} must be surrounded by single quotes in the Condition Message attribute.
 TemplateExtraConfig: |
   <PropertyRef Id="NETFRAMEWORK40FULL"/>
   <Condition Message='${DotnetMessage} https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net40-web-installer'>
