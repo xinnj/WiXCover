@@ -134,8 +134,8 @@
 
     ${LaunchApplicationChecked}
     ${LaunchApplicationTextProperty}
-    <Property Id='WixShellExecTarget' Value='${LaunchApplicationTarget}' />
-    <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
+    ${LaunchApplicationTargetProperty}
+    ${LaunchApplicationCustomAction}
 
     <CustomAction Id="Overwrite_WixSetDefaultPerMachineFolder" Property="WixPerMachineFolder"
       Value="[${ProgramFilesFolder}][ApplicationFolderName]" Execute="immediate" />

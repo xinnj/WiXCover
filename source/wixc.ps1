@@ -266,13 +266,16 @@ if ($ConfigYaml.LaunchApplication.Enable)
             throw "LaunchApplication.ExecTarget can not contain whitespace (space, tab, etc.)"
         }
     }
-    $VarsList.Add("LaunchApplicationTarget", $LaunchApplicationTarget)
+    $VarsList.Add("LaunchApplicationTargetProperty", "<Property Id='WixShellExecTarget' Value='${LaunchApplicationTarget}' />")
+    $VarsList.Add("LaunchApplicationCustomAction", "<CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />")
 }
 else
 {
     $VarsList.Add("LaunchApplication", "<!-- <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish> -->")
     $VarsList.Add("LaunchApplicationChecked", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' /> -->")
     $VarsList.Add("LaunchApplicationTextProperty", "<!-- <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='' /> -->")
+    $VarsList.Add("LaunchApplicationTargetProperty", "<!-- <Property Id='WixShellExecTarget' Value='' /> -->")
+    $VarsList.Add("LaunchApplicationCustomAction", "<!-- <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' /> -->")
 
 }
 
