@@ -110,12 +110,18 @@ LaunchApplication:
 AutoStart: false
 
 CodeSign:
-  # pfx file path
+  # Cert or pfx file path
   CertFile: ''
   # Password of the pfx file
   CertPassword: ''
+  # Code signing policy
+  Csp: ''
+  # Key container name
+  Kc: ''
   # Replace existing certification
   Replace: false
+  # Description of the certification
+  Description: ''
   # Which files in "Files.RootFolder" will be signed
   fileFilters:
     - '*.exe'

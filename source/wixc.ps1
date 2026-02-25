@@ -36,51 +36,90 @@ function SignCode
 {
     param
     (
-        [Parameter(Mandatory)][string[]]$File,
+        [Parameter(Mandatory)][string]$File,
         [Parameter(Mandatory)][string]$CertFile,
-        [Parameter(Mandatory)][string]$CertPassword,
+        [string]$CertPassword,
+        [string]$Csp,
+        [string]$Kc,
         [bool]$Replace,
         [string]$Description
     )
 
-    if (-not $Replace)
-    {
-        $cert = Get-AuthenticodeSignature -FilePath $File
-        if ($cert.status -eq 'Valid')
-        {
-            return
-        }
-    }
+    $File = [System.Environment]::ExpandEnvironmentVariables($File)
+    $CertFile = [System.Environment]::ExpandEnvironmentVariables($CertFile)
+    if ($CertPassword) { $CertPassword = [System.Environment]::ExpandEnvironmentVariables($CertPassword) }
+    if ($Csp) { $Csp = [System.Environment]::ExpandEnvironmentVariables($Csp) }
+    if ($Kc) { $Kc = [System.Environment]::ExpandEnvironmentVariables($Kc) }
+    if ($Description) { $Description = [System.Environment]::ExpandEnvironmentVariables($Description) }
 
     $timeStampServers = @(
         "http://time.certum.pl",
-        "http://timestamp.digicert.com",
-        "http://timestamp.comodoca.com/authenticode"
+        "http://timestamp.digicert.com"
     )
-    $retryTime = 2
+    
+    $signtoolPath = "$PSScriptRoot\signtool.exe"
 
-    :finish foreach ($server in $timeStampServers)
+    $signArgs = @(
+        "sign",
+        "/f", $CertFile,
+        "/td", "sha256",
+        "/fd", "sha256"
+    )
+    
+    if ($CertPassword) { $signArgs += @("/p", $CertPassword) }
+    if ($Description) { $signArgs += @("/d", $Description) }
+    if ($Csp) { $signArgs += @("/csp", $Csp) }
+    if ($Kc) { $signArgs += @("/kc", $Kc) }
+
+    if (-not $Replace)
     {
-        for ($i = 0; $i -lt $retryTime; $i++)
-        {
-            if ($Description)
+        try {
+            $cert = Get-AuthenticodeSignature -FilePath $File
+            if ($cert.Status -eq 'Valid')
             {
-                signtool sign /f "$CertFile" /p $CertPassword /t $server /d "$Description" "$File"
-            }
-            else
-            {
-                signtool sign /f "$CertFile" /p $CertPassword /t $server "$File"
-            }
-
-            if (-not $?)
-            {
-                throw "Sign file failed: $File"
-            }
-            else
-            {
-                break finish
+                Write-Host "File already signed, skipping: $File"
+                return
             }
         }
+        catch {
+            Write-Warning "Failed to check signature status for: $File"
+        }
+    }
+
+    $signSuccess = $false
+    foreach ($server in $timeStampServers)
+    {
+        $currentArgs = $signArgs + @("/tr", $server, $File)
+        for ($attempt = 0; $attempt -lt 2; $attempt++)
+        {
+            try
+            {
+                & $signtoolPath @currentArgs
+
+                if ($LASTEXITCODE -eq 0)
+                {
+                    $signSuccess = $true
+                    break
+                }
+                else
+                {
+                    Write-Warning "Signing failed (exit code: $LASTEXITCODE) for file: $File with server: $server"
+                }
+            }
+            catch
+            {
+                Write-Warning "Signing attempt failed: $($_.Exception.Message)"
+            }
+
+            if ($attempt -lt 1) { Start-Sleep -Seconds 1 }
+        }
+
+        if ($signSuccess) { break }
+    }
+
+    if (-not $signSuccess)
+    {
+        throw "Failed to sign file after all attempts: $File"
     }
 }
 
@@ -92,7 +131,7 @@ function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
     }
     else
     {
-        $MyList.Add($MyKey, $ValMyValueue)
+        $MyList.Add($MyKey, $MyValue)
     }
 }
 
@@ -305,27 +344,35 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
     $FileRootfolder = Resolve-Path -LiteralPath "$( $ConfigYaml.Files.RootFolder )"
     $FileRootfolder = $FileRootfolder -replace '\\$', ''
 
-    # Sign code
-    if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $ConfigYaml.CodeSign.fileFilters)
-    {
-        echo "Start to sign code..."
-        $files = @()
-        foreach ($OneFilter in $ConfigYaml.CodeSign.fileFilters)
+        # Sign code
+        if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.fileFilters)
         {
-            $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | %{ $_.FullName }
-        }
+            Write-Host "Start to sign code..."
+            
+            $files = @()
+            foreach ($OneFilter in $ConfigYaml.CodeSign.fileFilters)
+            {
+                $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | ForEach-Object { $_.FullName }
+            }
 
-        $Replace = $False
-        if ($null -ne $ConfigYaml.CodeSign.Replace)
-        {
-            $Replace = $ConfigYaml.CodeSign.Replace
-        }
+            $Replace = $False
+            if ($null -ne $ConfigYaml.CodeSign.Replace)
+            {
+                $Replace = $ConfigYaml.CodeSign.Replace
+            }
 
-        foreach ($file in $Files)
-        {
-            SignCode -File "$file" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Replace $Replace
+            if ($files.Count -gt 0)
+            {
+                foreach ($file in $files)
+                {
+                    SignCode -File $file -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Replace $Replace -Description $ConfigYaml.CodeSign.Description
+                }
+            }
+            else
+            {
+                Write-Warning "No files found to sign with the specified filters"
+            }
         }
-    }
 
     heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
     if (-not $?)
@@ -634,7 +681,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {
-        throw 'Invoke-Expression Failure'
+        throw "Candle compilation failed with exit code: $LASTEXITCODE"
     }
 
     $Culture = $VarsList.Culture
@@ -658,7 +705,7 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0)
     {
-        throw 'Invoke-Expression Failure'
+        throw "Light linking failed with exit code: $LASTEXITCODE"
     }
     Pop-Location
 }
@@ -705,10 +752,10 @@ if (-not $Output.Contains('\'))
     $Output = ".\" + $Output
 }
 
-if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.CertPassword -and $ConfigYaml.CodeSign.fileFilters)
+if ($ConfigYaml.CodeSign.CertFile)
 {
     Write-Host "Sign msi file..."
-    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Replace $True -Description $ConfigYaml.Product.Name
+    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Replace $True -Description $ConfigYaml.CodeSign.Description
 }
 
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
