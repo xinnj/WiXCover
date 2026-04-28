@@ -112,16 +112,16 @@ LaunchApplication:
 AutoStart: false
 
 CodeSign:
-  # pfx file path
-  CertFile: ''
-  # Password of the pfx file
-  CertPassword: ''
-  # Signature policy: Skip (default), Replace, Append
-  Mode: Skip
-  # Which files in "Files.RootFolder" will be signed
-  fileFilters:
-    - '*.exe'
-    - '*.dll'
+  - # pfx file path
+    CertFile: ''
+    # Password of the pfx file
+    CertPassword: ''
+    # Signature policy: Skip (default), Replace, Append
+    Mode: Skip
+    # Which files in "Files.RootFolder" will be signed
+    fileFilters:
+      - '*.exe'
+      - '*.dll'
 
 # Additional parameters for light.exe
 LightParams: ''

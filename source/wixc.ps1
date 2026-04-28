@@ -368,27 +368,41 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
     $FileRootfolder = $FileRootfolder -replace '\\$', ''
 
         # Sign code
-        if ($ConfigYaml.CodeSign.CertFile -and $ConfigYaml.CodeSign.fileFilters)
+        $codeSignRules = @()
+        if ($ConfigYaml.CodeSign -is [System.Collections.IEnumerable] -and $ConfigYaml.CodeSign -isnot [System.Collections.Hashtable])
         {
-            Write-Host "Start to sign code..."
-            
+            # Array format: multiple signing rules
+            $codeSignRules = @($ConfigYaml.CodeSign)
+        }
+        elseif ($ConfigYaml.CodeSign.CertFile)
+        {
+            # Single object format: backward compatibility, wrap as single-rule array
+            $codeSignRules = @($ConfigYaml.CodeSign)
+        }
+
+        foreach ($rule in $codeSignRules)
+        {
+            if (-not $rule.CertFile -or -not $rule.fileFilters) { continue }
+
+            Write-Host "Start to sign code with cert: $($rule.CertFile)..."
+
             $files = @()
-            foreach ($OneFilter in $ConfigYaml.CodeSign.fileFilters)
+            foreach ($OneFilter in $rule.fileFilters)
             {
                 $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | ForEach-Object { $_.FullName }
             }
 
             $SignMode = "Skip"
-            if ($null -ne $ConfigYaml.CodeSign.Mode)
+            if ($null -ne $rule.Mode)
             {
-                $SignMode = $ConfigYaml.CodeSign.Mode
+                $SignMode = $rule.Mode
             }
 
             if ($files.Count -gt 0)
             {
                 foreach ($file in $files)
                 {
-                    SignCode -File $file -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Mode $SignMode -Description $ConfigYaml.CodeSign.Description
+                    SignCode -File $file -CertFile $rule.CertFile -CertPassword $rule.CertPassword -Csp $rule.Csp -Kc $rule.Kc -Mode $SignMode -Description $rule.Description
                 }
             }
             else
@@ -775,10 +789,24 @@ if (-not $Output.Contains('\'))
     $Output = ".\" + $Output
 }
 
-if ($ConfigYaml.CodeSign.CertFile)
+if ($ConfigYaml.CodeSign)
 {
-    Write-Host "Sign msi file..."
-    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Mode Replace -Description $ConfigYaml.CodeSign.Description
+    # Resolve the first CodeSign rule for MSI signing
+    $msiSignRule = $null
+    if ($ConfigYaml.CodeSign -is [System.Collections.IEnumerable] -and $ConfigYaml.CodeSign -isnot [System.Collections.Hashtable])
+    {
+        $msiSignRule = @($ConfigYaml.CodeSign)[0]
+    }
+    else
+    {
+        $msiSignRule = $ConfigYaml.CodeSign
+    }
+
+    if ($msiSignRule.CertFile)
+    {
+        Write-Host "Sign msi file..."
+        SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $msiSignRule.CertFile -CertPassword $msiSignRule.CertPassword -Csp $msiSignRule.Csp -Kc $msiSignRule.Kc -Mode Replace -Description $msiSignRule.Description
+    }
 }
 
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"

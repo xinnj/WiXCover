@@ -109,23 +109,27 @@ LaunchApplication:
 # Auto start the application when user logon.
 AutoStart: false
 
+# Code signing configuration. Supports multiple signing rules processed in order.
+# This enables scenarios like dual signing (e.g., SHA-1 + SHA-256).
+# Each rule is self-contained with its own cert and file filters.
+# For backward compatibility, a single object (without '-') is also accepted.
 CodeSign:
-  # Cert or pfx file path
-  CertFile: ''
-  # Password of the pfx file
-  CertPassword: ''
-  # Code signing policy
-  Csp: ''
-  # Key container name
-  Kc: ''
-  # Signature policy: Skip (default), Replace, Append
-  Mode: Skip
-  # Description of the certification
-  Description: ''
-  # Which files in "Files.RootFolder" will be signed
-  fileFilters:
-    - '*.exe'
-    - '*.dll'
+  - # Cert or pfx file path
+    CertFile: ''
+    # Password of the pfx file
+    CertPassword: ''
+    # Code signing policy
+    Csp: ''
+    # Key container name
+    Kc: ''
+    # Signature policy: Skip (default), Replace, Append
+    Mode: Skip
+    # Description of the certification
+    Description: ''
+    # Which files in "Files.RootFolder" will be signed
+    fileFilters:
+      - '*.exe'
+      - '*.dll'
 
 # Additional parameters for light.exe
 LightParams: ''
