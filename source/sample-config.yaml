@@ -118,8 +118,8 @@ CodeSign:
   Csp: ''
   # Key container name
   Kc: ''
-  # Replace existing certification
-  Replace: false
+  # Signature policy: Skip (default), Replace, Append
+  Mode: Skip
   # Description of the certification
   Description: ''
   # Which files in "Files.RootFolder" will be signed

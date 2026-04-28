@@ -41,7 +41,7 @@ function SignCode
         [string]$CertPassword,
         [string]$Csp,
         [string]$Kc,
-        [bool]$Replace,
+        [ValidateSet("Skip", "Replace", "Append")][string]$Mode = "Skip",
         [string]$Description
     )
 
@@ -56,8 +56,45 @@ function SignCode
         "http://time.certum.pl",
         "http://timestamp.digicert.com"
     )
-    
+
     $signtoolPath = "$PSScriptRoot\signtool.exe"
+
+    # Check existing signature status for Skip / Append modes
+    if ($Mode -eq "Skip" -or $Mode -eq "Append")
+    {
+        try {
+            $cert = Get-AuthenticodeSignature -FilePath $File
+            if ($cert.Status -eq 'Valid')
+            {
+                if ($Mode -eq "Skip")
+                {
+                    Write-Host "File already signed, skipping: $File"
+                    return
+                }
+            }
+            elseif ($Mode -eq "Append")
+            {
+                # /as requires an existing signature; fall back to Replace
+                Write-Warning "No existing signature found on '$File'. Cannot append; falling back to Replace mode."
+                $Mode = "Replace"
+            }
+        }
+        catch {
+            Write-Warning "Failed to check signature status for: $File"
+        }
+    }
+
+    # Guard: /as only works on PE files (.exe, .dll)
+    if ($Mode -eq "Append")
+    {
+        $peExtensions = @(".exe", ".dll", ".sys", ".ocx", ".drv")
+        $ext = [System.IO.Path]::GetExtension($File).ToLower()
+        if ($ext -notin $peExtensions)
+        {
+            Write-Warning "Append mode (/as) is not supported for '$ext' files. Falling back to Replace mode."
+            $Mode = "Replace"
+        }
+    }
 
     $signArgs = @(
         "sign",
@@ -65,26 +102,12 @@ function SignCode
         "/td", "sha256",
         "/fd", "sha256"
     )
-    
+
+    if ($Mode -eq "Append") { $signArgs += "/as" }
     if ($CertPassword) { $signArgs += @("/p", $CertPassword) }
     if ($Description) { $signArgs += @("/d", $Description) }
     if ($Csp) { $signArgs += @("/csp", $Csp) }
     if ($Kc) { $signArgs += @("/kc", $Kc) }
-
-    if (-not $Replace)
-    {
-        try {
-            $cert = Get-AuthenticodeSignature -FilePath $File
-            if ($cert.Status -eq 'Valid')
-            {
-                Write-Host "File already signed, skipping: $File"
-                return
-            }
-        }
-        catch {
-            Write-Warning "Failed to check signature status for: $File"
-        }
-    }
 
     $signSuccess = $false
     foreach ($server in $timeStampServers)
@@ -355,17 +378,17 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
                 $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | ForEach-Object { $_.FullName }
             }
 
-            $Replace = $False
-            if ($null -ne $ConfigYaml.CodeSign.Replace)
+            $SignMode = "Skip"
+            if ($null -ne $ConfigYaml.CodeSign.Mode)
             {
-                $Replace = $ConfigYaml.CodeSign.Replace
+                $SignMode = $ConfigYaml.CodeSign.Mode
             }
 
             if ($files.Count -gt 0)
             {
                 foreach ($file in $files)
                 {
-                    SignCode -File $file -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Replace $Replace -Description $ConfigYaml.CodeSign.Description
+                    SignCode -File $file -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Mode $SignMode -Description $ConfigYaml.CodeSign.Description
                 }
             }
             else
@@ -755,7 +778,7 @@ if (-not $Output.Contains('\'))
 if ($ConfigYaml.CodeSign.CertFile)
 {
     Write-Host "Sign msi file..."
-    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Replace $True -Description $ConfigYaml.CodeSign.Description
+    SignCode -File "$WorkingDir\$FirstCulture`.msi" -CertFile $ConfigYaml.CodeSign.CertFile -CertPassword $ConfigYaml.CodeSign.CertPassword -Csp $ConfigYaml.CodeSign.Csp -Kc $ConfigYaml.CodeSign.Kc -Mode Replace -Description $ConfigYaml.CodeSign.Description
 }
 
 Move-Item -Force "$WorkingDir\$FirstCulture`.msi" "$Output"
