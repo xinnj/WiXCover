@@ -28,11 +28,14 @@ Localization:
   ManufacturerLoc: 'iCD'
   # License agreement terms in localized language, RTF format is needed.
   LicenseFile: 'license.rtf'
+  # The text displayed next to the Launch Application checkbox. Empty means using default text.
+  LaunchApplicationText: 'View quick start'
 -
   Culture: 'zh-cn'
   ProductNameLoc: 'WiX Cover'
   ManufacturerLoc: 'iCD'
   LicenseFile: 'license.rtf'
+  LaunchApplicationText: '查看快速开始'
 
 Files:
   # The files and directories in the installer package that will be installed on customers' computer.
@@ -101,6 +104,7 @@ KillProcess: false
 LaunchApplication:
   # Show a checkbox to launch the application after the installation if enabled.
   Enable: true
-
   # The checkbox is checked or not by default.
   CheckedByDefault: true
+  # The target command to launch. Empty means using the main executable.
+  ExecTarget: '[APPLICATIONFOLDER]\quickstart.txt'
