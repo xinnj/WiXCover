@@ -28,9 +28,20 @@ param (
     [string]$WorkingDir = $( Join-Path $env:TEMP "~wixc" )
 )
 
-Set-PSDebug -Trace 0
+if ($PSBoundParameters['Debug']) {
+    Set-PSDebug -Trace 2
+    $WiXVerbose = "-v"
+} else {
+    Set-PSDebug -Trace 0
+    $WiXVerbose = ""
+}
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
+
+function Write-Trace {
+    param([Parameter(Mandatory)][string]$Message)
+    Write-Debug "[TRACE] $Message"
+}
 
 function SignCode
 {
@@ -117,7 +128,9 @@ function SignCode
         {
             try
             {
+                Write-Trace "[signtool] $signtoolPath $($currentArgs -join ' ')"
                 & $signtoolPath @currentArgs
+                Write-Trace "[signtool] ExitCode=$LASTEXITCODE"
 
                 if ($LASTEXITCODE -eq 0)
                 {
@@ -612,7 +625,9 @@ if ($ConfigYaml.Regs.RootFolder -and ($ConfigYaml.Regs.RootFolder -ne ''))
     Write-Output "Windows Registry Editor Version 5.00" | Out-File "$WorkingDir\combined.reg"
     $RegRootfolder = $ConfigYaml.Regs.RootFolder -replace '\\$', ''
     Get-ChildItem -Path "$RegRootfolder" -Include *.reg -Recurse | ForEach-Object { Get-Content $_ | Select-Object -Skip 1 } | Out-File -FilePath "$WorkingDir\combined.reg" -Append
-    heat reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
+    Write-Trace "[heat] heat $WiXVerbose reg `"$WorkingDir\combined.reg`" -cg RegGroup -gg -out `"$WorkingDir\RegGroup.wxs`""
+    heat $WiXVerbose reg "$WorkingDir\combined.reg" -cg RegGroup -gg -out "$WorkingDir\RegGroup.wxs"
+    Write-Trace "[heat] ExitCode=$LASTEXITCODE"
     if (-not $?)
     {
         throw 'Native Failure'
@@ -818,9 +833,11 @@ foreach ($OneLoc in $ConfigYaml.Localization)
     Push-Location
     Set-Location "$WorkingDir"
     $arch = $ConfigYaml.arch
-    $Command = "candle -ext WiXUtilExtension $FirewallExt -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraWxsFileNames"
+    $Command = "candle $WiXVerbose -ext WiXUtilExtension $FirewallExt -arch $arch $MainFileName $FileGroupFileName $RegGroupFileName $EnvGroupFileName $ExtraWxsFileNames"
     Write-Host $Command
+    Write-Trace "[candle] WorkingDir=$WorkingDir, Command=$Command"
     Invoke-Expression $Command
+    Write-Trace "[candle] ExitCode=$LASTEXITCODE"
     if ($LASTEXITCODE -ne 0)
     {
         throw "Candle compilation failed with exit code: $LASTEXITCODE"
@@ -842,9 +859,11 @@ foreach ($OneLoc in $ConfigYaml.Localization)
         $LightParams = $ConfigYaml.LightParams
     }
 
-    $Command = "light -ext WixUIExtension -ext WiXUtilExtension $FirewallExt $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraObjFileNames"
+    $Command = "light $WiXVerbose -ext WixUIExtension -ext WiXUtilExtension $FirewallExt $LightParams $ClutersParameter -b `"$FileRootfolder`" -o $MsiName $MainObjName $FileGroupObjFileName $RegGroupObjFileName $EnvGroupObjFileName $ExtraObjFileNames"
     Write-Host $Command
+    Write-Trace "[light] WorkingDir=$WorkingDir, Command=$Command"
     Invoke-Expression $Command
+    Write-Trace "[light] ExitCode=$LASTEXITCODE"
     if ($LASTEXITCODE -ne 0)
     {
         throw "Light linking failed with exit code: $LASTEXITCODE"
@@ -864,12 +883,16 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
         else
         {
             $CurrentCulture = $k
-            torch -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
+            Write-Trace "[torch] torch $WiXVerbose -t language `"$WorkingDir\${FirstCulture}`.msi`" `"$WorkingDir\${CurrentCulture}`.msi`" -out `"$WorkingDir\${CurrentCulture}`.mst`""
+            torch $WiXVerbose -t language "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.msi" -out "$WorkingDir\${CurrentCulture}`.mst"
+            Write-Trace "[torch] ExitCode=$LASTEXITCODE"
             if (-not $?)
             {
                 throw 'Native Failure'
             }
+            Write-Trace "[cscript] cscript $PSScriptRoot\i18n\WiSubStg.vbs `"$WorkingDir\${FirstCulture}`.msi`" `"$WorkingDir\${CurrentCulture}`.mst`" $($CultureLanguage.$k)"
             cscript $PSScriptRoot\i18n\WiSubStg.vbs "$WorkingDir\${FirstCulture}`.msi" "$WorkingDir\${CurrentCulture}`.mst" $CultureLanguage.$k
+            Write-Trace "[cscript] ExitCode=$LASTEXITCODE"
             if (-not $?)
             {
                 throw 'Native Failure'
@@ -878,7 +901,9 @@ if (([Hashtable]$CultureLanguage).Count -gt 1)
     }
 
     $Languages = [Array]$CultureLanguage.Values -join ','
+    Write-Trace "[cscript] cscript $PSScriptRoot\i18n\WiLangId.vbs `"$WorkingDir\${FirstCulture}`.msi`" Package $Languages"
     cscript $PSScriptRoot\i18n\WiLangId.vbs "$WorkingDir\${FirstCulture}`.msi" Package $Languages
+    Write-Trace "[cscript] ExitCode=$LASTEXITCODE"
     if (-not $?)
     {
         throw 'Native Failure'
