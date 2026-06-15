@@ -158,6 +158,115 @@ function AddOrUpdateList([Hashtable]$MyList, [String]$MyKey, [String]$MyValue)
     }
 }
 
+function New-FileGroupWxs
+{
+    param
+    (
+        [Parameter(Mandatory)][string]$RootFolder,
+        [Parameter(Mandatory)][string]$DirectoryRefId,
+        [Parameter(Mandatory)][string]$ComponentGroupName,
+        [Parameter(Mandatory)][string]$OutputPath
+    )
+
+    $RootFolder = $RootFolder -replace '\\$', ''
+
+    Write-Host "Enumerating files in: $RootFolder"
+    $allFiles = @(Get-ChildItem -Path $RootFolder -Recurse -File -ErrorAction Stop | Sort-Object FullName)
+
+    Write-Host "Found $($allFiles.Count) files"
+
+    $sb = [System.Text.StringBuilder]::new()
+
+    [void]$sb.AppendLine('<?xml version="1.0" encoding="utf-8"?>')
+    [void]$sb.AppendLine('<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">')
+    [void]$sb.AppendLine('    <Fragment>')
+    [void]$sb.AppendLine("        <DirectoryRef Id=`"$DirectoryRefId`">")
+
+    $counter = 0
+    [System.Collections.Generic.List[string]]$componentRefs = @()
+    [System.Collections.Generic.List[string]]$currentDirParts = @()
+
+    foreach ($file in $allFiles)
+    {
+        $counter++
+
+        [System.Collections.Generic.List[string]]$fileDirParts = @()
+        if ($file.DirectoryName -ne $RootFolder)
+        {
+            $relPath = $file.DirectoryName.Substring($RootFolder.Length).TrimStart('\', '/')
+            if ($relPath)
+            {
+                $fileDirParts.AddRange([string[]]($relPath -split '[\\/]'))
+            }
+        }
+
+        $common = 0
+        while ($common -lt $currentDirParts.Count -and
+               $common -lt $fileDirParts.Count -and
+               $currentDirParts[$common] -eq $fileDirParts[$common])
+        {
+            $common++
+        }
+
+        for ($i = $currentDirParts.Count - 1; $i -ge $common; $i--)
+        {
+            $indent = "            " + ("    " * $i)
+            [void]$sb.AppendLine("$indent</Directory>")
+        }
+        if ($currentDirParts.Count -gt $common)
+        {
+            $currentDirParts.RemoveRange($common, $currentDirParts.Count - $common)
+        }
+
+        for ($i = $common; $i -lt $fileDirParts.Count; $i++)
+        {
+            $dirName = $fileDirParts[$i]
+            $dirId = "dir_$($counter)_$($i)_$($dirName -replace '[^a-zA-Z0-9_.-]', '_')"
+            $indent = "            " + ("    " * $i)
+            $escapedName = [System.Security.SecurityElement]::Escape($dirName)
+            [void]$sb.AppendLine("$indent<Directory Id=`"$dirId`" Name=`"$escapedName`">")
+            [void]$currentDirParts.Add($dirName)
+        }
+
+        $compId = "cmp{0:D6}" -f $counter
+        $fileId = "fil{0:D6}" -f $counter
+        $guid = [guid]::NewGuid().ToString("B").ToUpper()
+        $escapedSource = [System.Security.SecurityElement]::Escape($file.FullName)
+
+        $depth = $fileDirParts.Count
+        $compIndent = "            " + ("    " * $depth)
+        $fileIndent = "            " + ("    " * $depth) + "    "
+
+        [void]$sb.AppendLine("$compIndent<Component Id=`"$compId`" Guid=`"$guid`">")
+        [void]$sb.AppendLine("$fileIndent<File Id=`"$fileId`" KeyPath=`"yes`" Source=`"$escapedSource`" />")
+        [void]$sb.AppendLine("$compIndent</Component>")
+
+        [void]$componentRefs.Add("        <ComponentRef Id=`"$compId`" />")
+    }
+
+    for ($i = $currentDirParts.Count - 1; $i -ge 0; $i--)
+    {
+        $indent = "            " + ("    " * $i)
+        [void]$sb.AppendLine("$indent</Directory>")
+    }
+
+    [void]$sb.AppendLine("        </DirectoryRef>")
+    [void]$sb.AppendLine("    </Fragment>")
+    [void]$sb.AppendLine("    <Fragment>")
+    [void]$sb.AppendLine("        <ComponentGroup Id=`"$ComponentGroupName`">")
+    foreach ($ref in $componentRefs)
+    {
+        [void]$sb.AppendLine($ref)
+    }
+    [void]$sb.AppendLine("        </ComponentGroup>")
+    [void]$sb.AppendLine("    </Fragment>")
+    [void]$sb.AppendLine("</Wix>")
+
+    Write-Host "Writing WiX fragment to: $OutputPath"
+    [System.IO.File]::WriteAllText($OutputPath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+    Write-Host "Done. Generated $counter component(s)."
+}
+
 $Env:PATH = "$PSScriptRoot;$PSScriptRoot\WiX-v3.14.1\bin;" + $Env:PATH
 Import-Module $PSScriptRoot\powershell-yaml
 
@@ -411,11 +520,7 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
             }
         }
 
-    heat dir "$FileRootfolder" -cg FileGroup -dr APPLICATIONFOLDER -gg -srd -out "$WorkingDir\FileGroup.wxs"
-    if (-not $?)
-    {
-        throw 'Native Failure'
-    }
+    New-FileGroupWxs -RootFolder "$FileRootfolder" -DirectoryRefId "APPLICATIONFOLDER" -ComponentGroupName "FileGroup" -OutputPath "$WorkingDir\FileGroup.wxs"
 
     $VarsList.Add("FileGroup", "<ComponentGroupRef Id='FileGroup' />")
 
