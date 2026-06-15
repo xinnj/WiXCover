@@ -234,7 +234,7 @@ function New-FileGroupWxs
         for ($i = $common; $i -lt $fileDirParts.Count; $i++)
         {
             $dirName = $fileDirParts[$i]
-            $dirId = "dir_$($counter)_$($i)_$($dirName -replace '[^a-zA-Z0-9_.-]', '_')"
+            $dirId = "dir_$($counter)_$($i)_$($dirName -replace '[^a-zA-Z0-9_]', '_')"
             $indent = "            " + ("    " * $i)
             $escapedName = [System.Security.SecurityElement]::Escape($dirName)
             [void]$sb.AppendLine("$indent<Directory Id=`"$dirId`" Name=`"$escapedName`">")
