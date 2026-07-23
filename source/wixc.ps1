@@ -542,71 +542,148 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
 
     if ($ConfigYaml.FirewallException)
     {
-        # Read file as single string, build insertion with here-string to avoid quoting issues
+        # Read file as single string
         $content = Get-Content "$WorkingDir\FileGroup.wxs" -Raw
+
+        # Collect firewall components and their ComponentRefs
+        $firewallComponents = [System.Text.StringBuilder]::new()
+        $firewallComponentRefs = [System.Text.StringBuilder]::new()
+        $fwCount = 0
+        $seenIds = [System.Collections.Generic.HashSet[string]]::new()
 
         foreach ($fe in $ConfigYaml.FirewallException)
         {
-            if ($fe.File -and ($fe.File -ne ''))
+            if (-not $fe.File -or $fe.File -eq '') { continue }
+
+            $nameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($fe.File)
+            $fwId = "FirewallException_" + $nameWithoutExt
+            $fwCompId = "cmpFW_" + $nameWithoutExt
+
+            # Ensure unique IDs for duplicate entries
+            $uniqueIdx = 0
+            while (-not $seenIds.Add($fwCompId))
             {
-                $nameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($fe.File)
-                $ID = "FirewallException_" + $nameWithoutExt
+                $uniqueIdx++
+                $fwCompId = "cmpFW_${nameWithoutExt}_$uniqueIdx"
+            }
+            if ($uniqueIdx -gt 0)
+            {
+                $fwId = "FirewallException_${nameWithoutExt}_$uniqueIdx"
+            }
 
-                $Profile = "Profile='all'"
-                if ($fe.Profile -and ($fe.Profile -ne ''))
+            # Build attributes (preserves original logic)
+            $Profile = "Profile='all'"
+            if ($fe.Profile -and ($fe.Profile -ne ''))
+            {
+                $Profile = "Profile='$( $fe.Profile )'"
+            }
+
+            $Scope = "Scope='any'"
+            if ($fe.Scope -and ($fe.Scope -ne ''))
+            {
+                $Scope = "Scope='$( $fe.Scope )'"
+            }
+
+            $RemoteAddress = ''
+            if ($fe.RemoteAddress)
+            {
+                $Scope = ''
+                foreach ($addr in $fe.RemoteAddress)
                 {
-                    $Profile = "Profile='$( $fe.Profile )'"
+                    $RemoteAddress = $RemoteAddress + "                    <fire:RemoteAddress>$addr</fire:RemoteAddress>`r`n"
                 }
+                $RemoteAddress = $RemoteAddress.TrimEnd("`r`n")
+            }
 
-                $Scope = "Scope='any'"
-                if ($fe.Scope -and ($fe.Scope -ne ''))
-                {
-                    $Scope = "Scope='$( $fe.Scope )'"
-                }
+            $Port = ''
+            if ($fe.Port -and ($fe.Port -ne ''))
+            {
+                $Port = "Port='$( $fe.Port )'"
+            }
 
-                $RemoteAddress = ''
-                if ($fe.RemoteAddress)
-                {
-                    $Scope = ''
-                    foreach ($addr in $fe.RemoteAddress)
-                    {
-                        $RemoteAddress = $RemoteAddress + " <fire:RemoteAddress>$addr</fire:RemoteAddress>"
-                    }
-                }
+            $Protocol = ''
+            if ($fe.Protocol -and ($fe.Protocol -ne ''))
+            {
+                $Protocol = "Protocol='$( $fe.Protocol )'"
+            }
 
-                $Port = ''
-                if ($fe.Port -and ($fe.Port -ne ''))
-                {
-                    $Port = "Port='$( $fe.Port )'"
-                }
+            $FirewallAttrs = @($Profile, $Scope, $Port, $Protocol | Where-Object { $_ }) -join ' '
 
-                $Protocol = ''
-                if ($fe.Protocol -and ($fe.Protocol -ne ''))
+            # Find the matching fileId
+            $fileId = $null
+            $pattern = "(\s*)<File Id=`"(.+?)`" .* Source=`".*$( $fe.File )`" />"
+            foreach ($line in $content -split "`r?`n")
+            {
+                if ($line -match $pattern)
                 {
-                    $Protocol = "Protocol='$( $fe.Protocol )'"
-                }
-
-                $pattern = "(\s*)<File Id=`"(.+?)`" .* Source=`".*$( $fe.File )`" />"
-                foreach ($line in $content -split "`r?`n")
-                {
-                    if ($line -match $pattern)
-                    {
-                        $leadingSpaces = $matches[1]
-                        $fileId = $matches[2]
-                        $insert = @"
-$line
-$leadingSpaces<fire:FirewallException Id="$ID" Name="$nameWithoutExt" Program="[#$fileId]" $Profile $Scope $Port $Protocol>
-$leadingSpaces$RemoteAddress
-$leadingSpaces</fire:FirewallException>
-"@
-                        $content = $content.Replace($line, $insert)
-                    }
+                    $fileId = $matches[2]
+                    break
                 }
             }
+
+            if (-not $fileId)
+            {
+                Write-Warning "FirewallException: file '$($fe.File)' not found in FileGroup.wxs, skipping"
+                continue
+            }
+
+            # Build firewall component
+            $fwCount++
+            $fwGuid = [guid]::NewGuid().ToString("B").ToUpper()
+            $regKey = "Software\$($ConfigYaml.Manufacturer)\$($ConfigYaml.Product.Name)"
+            $regName = "FW_$fwId"
+
+            if ($RemoteAddress)
+            {
+                [void]$firewallComponents.AppendLine(@"
+            <Component Id="$fwCompId" Guid="$fwGuid">
+                <Condition>ALLUSERS=1</Condition>
+                <fire:FirewallException Id="$fwId" Name="$nameWithoutExt" Program="[#$fileId]" $FirewallAttrs>
+$RemoteAddress
+                </fire:FirewallException>
+                <RegistryValue Root="HKLM" Key="$regKey" Name="$regName" Value="1" Type="integer" KeyPath="yes" />
+            </Component>
+"@)
+            }
+            else
+            {
+                [void]$firewallComponents.AppendLine(@"
+            <Component Id="$fwCompId" Guid="$fwGuid">
+                <Condition>ALLUSERS=1</Condition>
+                <fire:FirewallException Id="$fwId" Name="$nameWithoutExt" Program="[#$fileId]" $FirewallAttrs />
+                <RegistryValue Root="HKLM" Key="$regKey" Name="$regName" Value="1" Type="integer" KeyPath="yes" />
+            </Component>
+"@)
+            }
+
+            [void]$firewallComponentRefs.AppendLine("        <ComponentRef Id=`"$fwCompId`" />")
         }
 
-        $content = $content.Replace('<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">', '<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">')
-        Set-Content -Path "$WorkingDir\FileGroup.wxs" -Value $content -Encoding utf8
+        # Only modify if at least one firewall component was generated
+        if ($fwCount -gt 0)
+        {
+            # Insert firewall component definitions before </DirectoryRef>
+            $firewallBlock = $firewallComponents.ToString().TrimEnd("`r`n")
+            $content = $content.Replace(
+                "        </DirectoryRef>",
+                "$firewallBlock`r`n        </DirectoryRef>"
+            )
+
+            # Insert ComponentRef entries before </ComponentGroup>
+            $firewallRefsBlock = $firewallComponentRefs.ToString().TrimEnd("`r`n")
+            $content = $content.Replace(
+                "        </ComponentGroup>",
+                "$firewallRefsBlock`r`n        </ComponentGroup>"
+            )
+
+            # Add firewall namespace
+            $content = $content.Replace(
+                '<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">',
+                '<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">'
+            )
+
+            Set-Content -Path "$WorkingDir\FileGroup.wxs" -Value $content -Encoding utf8
+        }
 
         $FirewallExt = "-ext WixFirewallExtension"
     }
