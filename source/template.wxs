@@ -107,6 +107,12 @@
       <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "machine") AND UPGRADEDIR]]>
     </SetProperty>
 
+    <!-- Allow overriding the install directory via TARGETDIR on the command line,
+         e.g. msiexec /i app.msi TARGETDIR="D:\MyApp" /qn -->
+    <SetProperty Action="SetInstallDirFromTargetDir" Id="APPLICATIONFOLDER" After="AppSearch" Value="[TARGETDIR]">
+      <![CDATA[NOT Installed AND TARGETDIR AND NOT APPLICATIONFOLDER]]>
+    </SetProperty>
+
     <!-- Installation scope of previous version is "perUser" -->
     <SetProperty Action="SetDefaultInstallScopeUser0" Id="WixAppFolder" After="AppSearch" Value="WixPerUserFolder">
       <![CDATA[NOT Installed AND UPGRADESCOPE AND (UPGRADESCOPE = "user") AND UPGRADEDIR]]>
