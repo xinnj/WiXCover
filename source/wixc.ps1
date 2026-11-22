@@ -52,7 +52,7 @@ function SignCode
         [string]$CertPassword,
         [string]$Csp,
         [string]$Kc,
-        [ValidateSet("Skip", "Replace", "Append")][string]$Mode = "Skip",
+        [ValidateSet("SkipSigned", "Replace", "Append")][string]$Mode = "SkipSigned",
         [string]$Description
     )
 
@@ -70,14 +70,14 @@ function SignCode
 
     $signtoolPath = "$PSScriptRoot\signtool.exe"
 
-    # Check existing signature status for Skip / Append modes
-    if ($Mode -eq "Skip" -or $Mode -eq "Append")
+    # Check existing signature status for SkipSigned / Append modes
+    if ($Mode -eq "SkipSigned" -or $Mode -eq "Append")
     {
         try {
             $cert = Get-AuthenticodeSignature -FilePath $File
             if ($cert.Status -eq 'Valid')
             {
-                if ($Mode -eq "Skip")
+                if ($Mode -eq "SkipSigned")
                 {
                     Write-Host "File already signed, skipping: $File"
                     return
@@ -514,10 +514,15 @@ if ($ConfigYaml.Files.RootFolder -and ($ConfigYaml.Files.RootFolder -ne ''))
                 $files += Get-ChildItem -Path $FileRootfolder -Recurse -Filter $OneFilter | ForEach-Object { $_.FullName }
             }
 
-            $SignMode = "Skip"
+            $SignMode = "SkipSigned"
             if ($null -ne $rule.Mode)
             {
                 $SignMode = $rule.Mode
+                if ($SignMode -eq "Skip")
+                {
+                    Write-Warning "CodeSign.Mode 'Skip' is deprecated; use 'SkipSigned' instead."
+                    $SignMode = "SkipSigned"
+                }
             }
 
             if ($files.Count -gt 0)

@@ -29,7 +29,7 @@ Add `-Debug` for verbose WiX toolchain output when troubleshooting.
 - **Multi-language support** — multiple cultures in a single MSI
 - **Launch on finish** — optional checkbox to launch the application after installation
 - **Process termination** — optionally kills running processes from a previous version during install to avoid reboots
-- **Code signing** — signs source binaries and the final MSI; supports multiple signing rules with Skip/Replace/Append modes
+- **Code signing** — signs source binaries and the final MSI; supports multiple signing rules with SkipSigned/Replace/Append modes
 - **Firewall exceptions** — registers Windows Firewall rules for specified executables
 - **Auto-start** — optionally registers the application to start on user logon
 - **Extensible** — inject custom WiX XML via `ExtraSourceFiles` or `TemplateExtraConfig` for advanced scenarios (e.g., .NET Framework checks, VC++ redistributables)

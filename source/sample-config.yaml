@@ -122,8 +122,8 @@ CodeSign:
     Csp: ''
     # Key container name
     Kc: ''
-    # Signature policy: Skip (default), Replace, Append
-    Mode: Skip
+    # Signature policy: SkipSigned (default), Replace, Append. Legacy 'Skip' is treated as 'SkipSigned'.
+    Mode: SkipSigned
     # Description of the certification
     Description: ''
     # Which files in "Files.RootFolder" will be signed
